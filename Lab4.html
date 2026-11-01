@@ -1,0 +1,420 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PSM — Laboratorium 4: UART i GPS</title><style>*{box-sizing:border-box}html{color-scheme:light}body{margin:0;background:#f2f4f7;color:#1d2939;font:17px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:980px;margin:32px auto;padding:40px 48px 64px;background:#fff;border:1px solid #e0e5ec;border-radius:10px}h1{font-size:2rem;line-height:1.25;margin-top:0}h2{font-size:1.5rem;line-height:1.35;margin-top:2.5em;padding-top:.7em;border-top:1px solid #dce3ec;color:#174975}h3{font-size:1.14rem;line-height:1.4;margin-top:1.8em}h4{font-size:1rem;margin-bottom:.4em}p{margin:.9em 0}li{margin:.3em 0}pre{white-space:pre;overflow-x:auto;background:#f4f6f9;color:#172638;border:1px solid #dbe2eb;border-radius:6px;padding:20px;font:14px/1.65 Consolas,"Courier New",monospace;tab-size:4;user-select:text}code{font:inherit}table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.94rem}th,td{border:1px solid #d9e0e8;padding:9px 12px;text-align:left;vertical-align:top}th{background:#eef3f8}a{color:#075db4;overflow-wrap:anywhere}@media(max-width:680px){main{margin:0;padding:24px 18px;border:0;border-radius:0}body{font-size:16px}pre{padding:14px}table{font-size:.85rem}th,td{padding:6px}}@media print{body{background:white}main{max-width:none;border:0;margin:0;padding:0}pre{white-space:pre-wrap}h2,h3{break-after:avoid}}
+.callout{border:1.5px solid var(--accent);border-radius:8px;margin:1.6em 0;padding:0 20px 10px;background:var(--tint)}
+.callout>h3:first-child{display:table;margin:-.8em 0 .8em;padding:3px 12px;border-radius:5px;background:var(--accent);color:#fff;font-size:1rem}
+.callout.task{--accent:#a91e14;--tint:#fffafa}
+.callout.warning{--accent:#e44419;--tint:#fff8f3}
+.callout.info{--accent:#008394;--tint:#f3fbfc}
+.callout.tip{--accent:#bd7900;--tint:#fffaf0}
+.callout.measure{--accent:#6550a1;--tint:#faf8ff}
+.callout p:last-child,.callout ul:last-child,.callout ol:last-child{margin-bottom:.5em}
+@media(max-width:680px){.callout{padding-right:12px;padding-left:12px}.callout>h3:first-child{max-width:100%}}
+</style></head><body><main>
+<h1>Podstawy Systemów Mikroprocesorowych</h1>
+<h2>Laboratorium 4: UART i GPS — komunikacja szeregowa</h2>
+<p>Autorzy: Dariusz Tefelski, Angelika Tefelska</p>
+<h2>1. Wprowadzenie</h2>
+<aside class="callout info"><h3>Cel ćwiczenia</h3>
+<p>Celem ćwiczenia jest poznanie asynchronicznej komunikacji szeregowej UART oraz wykorzystanie jej do wymiany danych pomiędzy dwoma mikrokontrolerami i do odbioru informacji z modułu GPS.</p>
+<p>W poprzednich laboratoriach Raspberry Pi Pico 2 W pracowało głównie samodzielnie: odczytywało wejścia, wykonywało obliczenia i sterowało wyjściami. W praktycznym systemie mikroprocesorowym mikrokontroler bardzo często wymienia dane z innymi mikrokontrolerami, czujnikami, modułami komunikacyjnymi lub komputerem.</p>
+<p>Na tych zajęciach wykorzystamy fakt, że na płytce dydaktycznej znajdują się dwa moduły Raspberry Pi Pico 2 W. Najpierw połączymy je ze sobą, a następnie jeden z mikrokontrolerów będzie odbierał dane z modułu GPS.</p>
+</aside>
+<h2>2. Wyposażenie stanowiska</h2>
+<p>Do wykonania ćwiczenia potrzebne są:</p>
+<ul>
+<li>płytka dydaktyczna z dwoma modułami Raspberry Pi Pico 2 W,</li>
+<li>dwa przewody USB,</li>
+<li>przewody połączeniowe,</li>
+<li>moduł GPS Waveshare LC76G GNSS,</li>
+<li>jedna z diod LED oraz potencjometr POT1 na płytce dydaktycznej,</li>
+<li>Analog Discovery II z programem WaveForms.</li>
+</ul>
+<aside class="callout warning"><h3>Uwaga</h3>
+<p>Połączenia pomiędzy modułami wykonuj przy odłączonym zasilaniu. Urządzenia komunikujące się przewodowo muszą mieć wspólny potencjał odniesienia, dlatego ich masy należy połączyć.</p>
+</aside>
+<aside class="callout info"><h3>Dwa moduły RPi Pico na jednej płytce</h3>
+<p>W dalszej części instrukcji moduły będą oznaczane:</p>
+<ul>
+<li>RPi Pico A — pierwszy mikrokontroler, pełniący początkowo rolę nadajnika,</li>
+<li>RPi Pico B — drugi mikrokontroler, pełniący początkowo rolę odbiornika.</li>
+</ul>
+<p>Każdy moduł może być programowany niezależnie przez własne złącze USB.</p>
+</aside>
+<h2>3. Zadanie 1: Pierwsza transmisja UART</h2>
+<p>UART (Universal Asynchronous Receiver/Transmitter) jest interfejsem szeregowym. Dane są przesyłane kolejno bit po bicie. Podstawowe linie to:</p>
+<ul>
+<li>TX (transmit) — linia nadawcza,</li>
+<li>RX (receive) — linia odbiorcza.</li>
+</ul>
+<p>Ponieważ UART jest interfejsem asynchronicznym, urządzenia nie przesyłają osobnego sygnału zegarowego. Nadajnik i odbiornik muszą więc zostać skonfigurowane z taką samą szybkością transmisji.</p>
+<p>W zadaniach 1–3, pomiędzy dwoma Pico, przyjmiemy konfigurację (moduł LC76G w zadaniu 4 będzie pracował z szybkością 115200 bit/s):</p>
+<p>9600 bit/s, 8 bitów danych, brak parzystości, 1 bit stopu.</p>
+<p>Taki zapis często skraca się do 9600 8N1.</p>
+<aside class="callout info"><h3>Co oznacza baud rate?</h3>
+<p>Baud rate określa liczbę symboli przesyłanych w ciągu jednej sekundy. W typowej transmisji UART każdy symbol odpowiada jednemu bitowi, dlatego dla UART wartości podawane w bodach i w bitach na sekundę są liczbowo takie same. Oznacza to, że ustawienie baudrate=9600 odpowiada transmisji 9600 bitów na sekundę.</p>
+<p>Nie oznacza to jednak przesyłania 9600 bajtów na sekundę. W konfiguracji 8N1 jeden znak składa się z 1 bitu startu, 8 bitów danych i 1 bitu stopu, czyli łącznie z 10 bitów. Maksymalna szybkość przesyłania znaków wynosi więc w przybliżeniu:</p>
+<p>9600 / 10 ≈ 960 znaków/s. (1)</p>
+</aside>
+<aside class="callout info"><h3>Jak wygląda pojedynczy znak UART?</h3>
+<p>W stanie spoczynku linia TX znajduje się w stanie wysokim. Transmisja jednego znaku obejmuje:</p>
+<ol>
+<li>bit startu — stan niski,</li>
+<li>osiem bitów danych,</li>
+<li>bit stopu — stan wysoki.</li>
+</ol>
+<p>Przy szybkości 9600 bit/s czas pojedynczego bitu wynosi około:</p>
+<p>t_b = 1 / 9600 ≈ 104 µs. (2)</p>
+</aside>
+<h3>3.1. Połączenie RPi Pico A z RPi Pico B</h3>
+<p>Na początek wykorzystamy tylko jeden kierunek transmisji:</p>
+<table><thead><tr><th>RPi Pico A</th><th>RPi Pico B</th></tr></thead><tbody>
+<tr><td>GP0 — UART0 TX</td><td>GP1 — UART0 RX</td></tr>
+<tr><td>GND</td><td>GND</td></tr>
+</tbody></table>
+<aside class="callout warning"><h3>Uwaga</h3>
+<p>Linie nadajnika i odbiornika łączymy na krzyż: TX jednego urządzenia musi trafić do RX drugiego. Nie łącz ze sobą dwóch wyjść TX.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 1.1 — RPi Pico A wysyła, RPi Pico B odbiera</h3>
+<p>Najpierw zaprogramuj RPi Pico A. Zapisz poniższy program na mikrokontrolerze jako main.py, aby uruchamiał się automatycznie po restarcie.</p>
+<pre><code>from machine import UART, Pin
+from utime import sleep
+
+uart = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1)
+
+counter = 0
+
+while True:
+    message = &quot;CNT:{}\n&quot;.format(counter)
+    uart.write(message.encode())
+    counter += 1
+    sleep(0.5)</code></pre>
+</aside>
+<aside class="callout info"><h3>Jak działa linia tworząca komunikat?</h3>
+<p>Napis CNT:{}\n jest szablonem tekstu. Para nawiasów klamrowych {} oznacza miejsce, w które metoda format() wstawi przekazaną wartość.</p>
+<p>Dla przykładu, gdy counter = 12, wyrażenie &quot;CNT:{}\n&quot;.format(counter) utworzy tekst odpowiadający CNT:12 zakończony znakiem nowej linii \n. Dzięki temu w każdej iteracji pętli wysyłana jest aktualna wartość licznika.</p>
+<pre><code>counter = 12
+&quot;CNT:{}\n&quot;.format(counter)</code></pre>
+<p>Następnie przełącz Thonny na RPi Pico B i uruchom:</p>
+<pre><code>from machine import UART, Pin
+from utime import sleep_ms
+
+uart = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1), bits=8, parity=None, stop=1,
+            timeout=100, timeout_char=20)
+
+while True:
+    if uart.any():
+        line = uart.readline()
+        if line is not None:
+            try:
+                text = line.decode(&quot;ascii&quot;).strip()
+                print(text)
+            except UnicodeError:
+                print(&quot;Blad dekodowania: sprawdz baudrate&quot;)
+    sleep_ms(10)</code></pre>
+<p>Sprawdź:</p>
+<ol>
+<li>czy licznik zwiększa się kolejno,</li>
+<li>co stanie się po odłączeniu przewodu TX–RX,</li>
+<li>co stanie się, jeżeli na RPi Pico B ustawisz inną szybkość transmisji, np. 4800 bit/s.</li>
+</ol>
+</aside>
+<aside class="callout info"><h3>Podstawowe metody klasy UART</h3>
+<p>W dalszej części laboratorium wielokrotnie wykorzystujemy trzy podstawowe metody:</p>
+<ul>
+<li>uart.write(data) — wysyła podane bajty przez linię TX; w przypadku tekstu najpierw używamy zwykle encode(),</li>
+<li>uart.any() — informuje, czy w buforze odbiorczym znajdują się dane; wartość różna od zera oznacza, że można próbować je odczytać,</li>
+<li>uart.readline() — odczytuje dane do znaku końca linii \n; po upływie czasu oczekiwania może zwrócić także fragment linii, a przy braku danych — None.</li>
+</ul>
+<p>W prostym przykładzie ustawiono czasy oczekiwania, aby ograniczyć dzielenie krótkich komunikatów. Nie gwarantuje to jednak odbioru całej linii. W zadaniach 3–5 stosuj buforowanie do znaku końca linii, pokazane w zadaniu 4.1. Metoda read() pobiera dostępne bajty (lub zwraca None); nie rozpoznaje granic komunikatów.</p>
+<p>W przykładzie schemat odbioru ma postać: najpierw sprawdzamy uart.any(), a następnie próbujemy pobrać komunikat za pomocą uart.readline().</p>
+</aside>
+<aside class="callout info"><h3>str, bytes, encode() i decode()</h3>
+<p>Tekst używany w programie Python jest obiektem typu str. UART przesyła jednak bajty. Dlatego przed wysłaniem tekst można zamienić na bajty: message.encode(). Natomiast dane odebrane z UART mają postać bytes. Aby ponownie otrzymać tekst używamy: line.decode().</p>
+<pre><code>message.encode()
+line.decode()</code></pre>
+<p>Metoda strip() usuwa z początku i końca tekstu znaki białe, w tym znak końca linii \n.</p>
+</aside>
+<aside class="callout info"><h3>Po co dodajemy \n?</h3>
+<p>UART przesyła jedynie kolejne bajty i sam nie wie, gdzie kończy się komunikat. W tym ćwiczeniu przyjmujemy prostą zasadę: każdy komunikat kończy się znakiem nowej linii.</p>
+<p>Dzięki temu odbiornik może użyć funkcji readline(), która odczytuje dane do momentu wystąpienia \n.</p>
+</aside>
+<h2>4. Zadanie 2: Co naprawdę jest przesyłane linią TX?</h2>
+<p>Do tej pory obserwowaliśmy jedynie tekst pojawiający się po stronie odbiornika. Teraz sprawdzimy fizyczny przebieg transmisji.</p>
+<aside class="callout measure"><h3>Pomiar 2.1 — UART w Analog Discovery II</h3>
+<p>Pozostaw połączenie RPi Pico A → RPi Pico B. Podłącz wejście cyfrowe Analog Discovery II do linii GP0 RPi Pico A oraz połącz masę analizatora z GND płytki.</p>
+<p>W programie WaveForms uruchom narzędzie Logic. Dodaj dekoder UART i ustaw parametry:</p>
+<ul>
+<li>szybkość: 9600 bit/s,</li>
+<li>8 bitów danych,</li>
+<li>brak parzystości,</li>
+<li>1 bit stopu.</li>
+</ul>
+<p>Zaobserwuj przesyłane komunikaty i porównaj je z tym, co pojawia się w Thonny po stronie RPi Pico B.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 2.1 — Pomiar czasu pojedynczego bitu</h3>
+<p>Na RPi Pico A uruchom na chwilę program wysyłający regularnie pojedynczy znak U (poprzedni program zakomentuj gdyż będzie potrzebny w dalszej części laboratorium):</p>
+<pre><code>from machine import UART, Pin
+from utime import sleep_ms
+
+uart = UART(0, baudrate=9600, tx=Pin(0), rx=Pin(1))
+
+while True:
+    uart.write(b&quot;U&quot;)
+    sleep_ms(20)</code></pre>
+<p>Znak U ma kod ASCII 0x55, dzięki czemu w jego bitach danych występują naprzemiennie zera i jedynki.</p>
+<p>Za pomocą kursorów w WaveForms:</p>
+<ol>
+<li>zmierz czas pojedynczego bitu,</li>
+<li>oblicz z niego szybkość transmisji,</li>
+<li>porównaj wynik z wartością 9600 bit/s,</li>
+<li>wskaż bit startu i bit stopu.</li>
+</ol>
+<p>Po wykonaniu pomiaru przywróć na RPi Pico A program z zadania 1.1.</p>
+</aside>
+<h2>5. Zadanie 3: Komunikacja dwukierunkowa i prosty protokół</h2>
+<p>UART może jednocześnie nadawać i odbierać dane. Dodaj drugie połączenie:</p>
+<table><thead><tr><th>RPi Pico A</th><th>RPi Pico B</th></tr></thead><tbody>
+<tr><td>GP0 TX</td><td>GP1 RX</td></tr>
+<tr><td>GP1 RX</td><td>GP0 TX</td></tr>
+<tr><td>GND</td><td>GND</td></tr>
+</tbody></table>
+<p>Oznacza to, że wykonujemy dwa połączenia krzyżowe: GP0 (TX) modułu RPi Pico A łączymy z GP1 (RX) modułu RPi Pico B, natomiast GP0 (TX) modułu RPi Pico B łączymy z GP1 (RX) modułu RPi Pico A. Dodatkowo łączymy masy obu mikrokontrolerów.</p>
+<p>Zamiast wysyłać dowolne teksty, zdefiniujemy prosty protokół aplikacyjny. RPi Pico A będzie wysyłało polecenia, a RPi Pico B będzie wykonywało odpowiednią operację i odsyłało odpowiedź.</p>
+<table><thead><tr><th>Polecenie</th><th>Działanie RPi Pico B</th><th>Odpowiedź</th></tr></thead><tbody>
+<tr><td>LED:ON</td><td>włączenie LED</td><td>OK</td></tr>
+<tr><td>LED:OFF</td><td>wyłączenie LED</td><td>OK</td></tr>
+<tr><td>ADC?</td><td>odczyt POT1 przez ADC</td><td>ADC:xxxxx</td></tr>
+</tbody></table>
+<aside class="callout task"><h3>Zadanie 3.1 — Urządzenie wykonawcze RPi Pico B</h3>
+<p>Na RPi Pico B:</p>
+<ol>
+<li>podłącz diodę LED do GP15,</li>
+<li>połącz POT1 z GP26,</li>
+<li>odbieraj kolejne polecenia zakończone znakiem \n,</li>
+<li>dla LED:ON i LED:OFF steruj diodą,</li>
+<li>dla ADC? wykonaj pomiar i odeślij wynik,</li>
+<li>dla nieznanego polecenia odeślij ERR.</li>
+</ol>
+<p>Pamiętaj, że dioda LED na płytce jest aktywna stanem niskim.</p>
+</aside>
+<aside class="callout tip"><h3>Podpowiedź</h3>
+<p>Odebrany komunikat możesz porównywać za pomocą konstrukcji:</p>
+<pre><code>if command == &quot;LED:ON&quot;:
+    # ...
+elif command == &quot;LED:OFF&quot;:
+    # ...
+elif command == &quot;ADC?&quot;:
+    # ...
+else:
+    # ...</code></pre>
+<p>Odpowiedź również zakończ znakiem \n.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 3.2 — Sterownik RPi Pico A</h3>
+<p>Napisz program dla RPi Pico A, który kolejno:</p>
+<ol>
+<li>wysyła LED:ON i czeka na odpowiedź,</li>
+<li>po 1 s wysyła ADC? i wyświetla otrzymany wynik,</li>
+<li>po kolejnej 1 s wysyła LED:OFF i czeka na odpowiedź,</li>
+<li>powtarza cały cykl.</li>
+</ol>
+<p>Sprawdź, co stanie się, gdy celowo wyślesz nieobsługiwane polecenie, np. TEST.</p>
+</aside>
+<aside class="callout info"><h3>Po co tworzyć protokół?</h3>
+<p>UART definiuje sposób przesyłania kolejnych bitów i bajtów, ale nie określa znaczenia danych. To programista ustala, czy ciąg bajtów oznacza temperaturę, polecenie włączenia diody, współrzędne GPS czy coś zupełnie innego.</p>
+<p>Zbiór reguł opisujących format i znaczenie komunikatów nazywamy protokołem komunikacyjnym.</p>
+</aside>
+<h2>6. Zadanie 4: Moduł GPS jako urządzenie UART</h2>
+<p>Moduły GPS używane na stanowiskach wysyłają dane przez UART. Domyślna szybkość transmisji modułów Waveshare LC76G GNSS wynosi 115200 bit/s.</p>
+<p>W tej części wykorzystamy drugi interfejs UART mikrokontrolera:</p>
+<table><thead><tr><th>GPS</th><th>RPi Pico A</th></tr></thead><tbody>
+<tr><td>VCC</td><td>3,3 V</td></tr>
+<tr><td>GND</td><td>GND</td></tr>
+<tr><td>TXD</td><td>GP5 — UART1 RX</td></tr>
+<tr><td>RXD</td><td>nie podłączaj</td></tr>
+</tbody></table>
+<p>Reszty wyprowadzeń z modułu GPS nie podłączaj. Do samego odbierania pozycji wystarczy linia TX modułu GPS połączona z wejściem RX mikrokontrolera.</p>
+<aside class="callout warning"><h3>Uwaga</h3>
+<p>Przed podłączeniem sprawdź oznaczenia wyprowadzeń konkretnego modułu GPS znajdującego się na stanowisku. W tej instrukcji wykorzystujemy moduły Waveshare LC76G GNSS.</p>
+<p>Odbiór sygnału satelitarnego wewnątrz budynku może być słaby. Moduł może wysyłać poprawne ramki NMEA, mimo że nie ma jeszcze poprawnie wyznaczonej pozycji.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 4.1 — Surowe dane z GPS</h3>
+<p>Podłącz moduł GPS do RPi Pico A i uruchom:</p>
+<pre><code>from machine import UART, Pin
+import utime
+
+gps = UART(1, baudrate=115200, tx=Pin(4), rx=Pin(5),
+           bits=8, parity=None, stop=1, rxbuf=4096)
+bufor = b&quot;&quot;
+
+while True:
+    if gps.any():
+        dane = gps.read()
+
+        if dane:
+            bufor += dane
+
+            # Odczyt moze zawierac fragment lub kilka ramek.
+            while b&quot;\n&quot; in bufor:
+                linia, bufor = bufor.split(b&quot;\n&quot;, 1)
+                linia = linia.strip()
+
+                # Pomijamy urwany poczatek po starcie programu
+                if linia.startswith(b&quot;$&quot;):
+                    try:
+                        text = linia.decode(&quot;ascii&quot;)
+                        print(text)
+                    except UnicodeError:
+                        pass
+
+            # Ochrona przed brakiem konca linii
+            if len(bufor) &gt; 2048:
+                bufor = b&quot;&quot;
+
+    utime.sleep_ms(1)</code></pre>
+<p>Zaobserwuj:</p>
+<ul>
+<li>od jakiego znaku rozpoczynają się komunikaty,</li>
+<li>jakie różne identyfikatory ramek pojawiają się w danych,</li>
+<li>jak często pojawiają się nowe linie,</li>
+<li>czy pola współrzędnych są wypełnione.</li>
+</ul>
+</aside>
+<aside class="callout info"><h3>Jak działają bufor, split() i strip()?</h3>
+<p>UART dostarcza strumień bajtów. Jeden odczyt może zawierać część ramki lub kilka ramek NMEA. Dlatego dopisujemy dane do zmiennej bufor i czekamy na znak końca linii: b&quot;\n&quot;. Ramki NMEA kończą się parą CR/LF, czyli b&quot;\r\n&quot;.</p>
+<p>Metoda split(separator, maxsplit) dzieli dane i zwraca listę części. Separator musi mieć ten sam typ co dane: dla bajtów używamy b&quot;\n&quot;, dla tekstu np. &quot;,&quot;. Argument 1 ogranicza liczbę podziałów do jednego:</p>
+<pre><code>bufor = b&quot;ABC\r\nDEF\r\nGHI&quot;
+linia, bufor = bufor.split(b&quot;\n&quot;, 1)
+# linia: b&quot;ABC\r&quot;
+# bufor: b&quot;DEF\r\nGHI&quot;</code></pre>
+<p>Przypisanie rozpakowuje dwie części do dwóch zmiennych. Separator znika z wyniku, lecz reszta bufora pozostaje do dalszej analizy. Pętla while odbiera wszystkie kompletne linie; niepełna końcówka czeka na następny odczyt.</p>
+<p>Metoda strip() zwraca kopię bez białych znaków na początku i końcu (np. spacji, CR i LF). Nie usuwa przecinków ani znaków wewnątrz danych:</p>
+<pre><code>linia = b&quot;ABC\r&quot;
+linia = linia.strip()  # b&quot;ABC&quot;
+tekst = &quot;  A,B  \r\n&quot;.strip()  # &quot;A,B&quot;</code></pre>
+<p>Metody nie zmieniają oryginału w miejscu, dlatego przypisujemy ich wynik. Tutaj strip() usuwa przede wszystkim CR pozostałe po podziale po LF. Dopiero potem decode(&quot;ascii&quot;) zamienia bajty na tekst.</p>
+<p>Drugi sposób użycia split() rozdziela pola NMEA:</p>
+<pre><code>fields = &quot;A,,B,&quot;.split(&quot;,&quot;)
+# Wynik: [&quot;A&quot;, &quot;&quot;, &quot;B&quot;, &quot;&quot;]</code></pre>
+<p>Puste pola są zachowane i mają znaczenie. Nie usuwaj ich, ponieważ przesunęłoby to indeksy współrzędnych i statusu. Indeksowanie listy zaczyna się od zera.</p>
+</aside>
+<h3>6.1. Komunikaty NMEA</h3>
+<p>Popularne odbiorniki GPS przesyłają dane w postaci tekstowych zdań NMEA. Poszczególne pola są oddzielone przecinkami.</p>
+<p>LC76G jest odbiornikiem GNSS: GPS to jeden z obsługiwanych systemów. Prefiks GN oznacza dane z wielu systemów, a GP — GPS. Typ zdania (np. GGA) określa układ pól; sam prefiks nie zmienia ich kolejności. W LC76G spotkasz m.in.:</p>
+<ul>
+<li>$GPGGA lub $GNGGA — dane dotyczące aktualnej pozycji,</li>
+<li>$GPRMC lub $GNRMC — podstawowe dane nawigacyjne.</li>
+</ul>
+<p>W zadaniu wykorzystamy ramkę GGA. Jej najważniejsze pola mają postać:</p>
+<table><thead><tr><th>Pole GGA</th><th>Indeks fields</th><th>Znaczenie</th></tr></thead><tbody>
+<tr><td>1</td><td>1</td><td>czas UTC</td></tr>
+<tr><td>2</td><td>2</td><td>szerokość geograficzna w formacie NMEA</td></tr>
+<tr><td>3</td><td>3</td><td>kierunek N/S</td></tr>
+<tr><td>4</td><td>4</td><td>długość geograficzna w formacie NMEA</td></tr>
+<tr><td>5</td><td>5</td><td>kierunek E/W</td></tr>
+<tr><td>6</td><td>6</td><td>status wyznaczenia pozycji (fix quality); 0 oznacza brak poprawnego fixu</td></tr>
+<tr><td>7</td><td>7</td><td>liczba satelitów używanych do wyznaczenia pozycji</td></tr>
+<tr><td>8</td><td>8</td><td>HDOP — współczynnik geometrii satelitów w płaszczyźnie poziomej</td></tr>
+<tr><td>9</td><td>9</td><td>wysokość nad poziomem morza</td></tr>
+</tbody></table>
+<aside class="callout info"><h3>Co oznaczają pola 6 i 8?</h3>
+<p>Pole 6 nie opisuje jakości połączenia radiowego. Jest to status sposobu wyznaczenia pozycji (fix quality). Wartość 0 oznacza, że odbiornik nie ma poprawnie wyznaczonej pozycji; wartość większa od zera oznacza dostępny fix.</p>
+<p>Pole 8 zawiera wartość HDOP (Horizontal Dilution of Precision). Opisuje ona wpływ geometrii widocznych satelitów na wyznaczenie pozycji w płaszczyźnie poziomej. Mniejsza wartość HDOP oznacza zazwyczaj korzystniejszą geometrię, ale nie jest to bezpośrednio błąd pozycji wyrażony w metrach.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 4.2 — Odczyt danych z ramki GGA</h3>
+<p>Zmodyfikuj program tak, aby analizował tylko ramki GGA.</p>
+<p>W zadaniu 4.1 zastąp instrukcję print(text) analizą tekstu, pozostawiając ją wewnątrz tego samego bloku try. Ramkę rozpoznasz przez:</p>
+<pre><code>if text.startswith((&quot;$GNGGA,&quot;, &quot;$GPGGA,&quot;)):
+    fields = text.split(&quot;,&quot;)</code></pre>
+</aside>
+<aside class="callout info"><h3>Co znajduje się w zmiennej fields?</h3>
+<p>Metoda split(&quot;,&quot;) dzieli tekst w miejscach występowania przecinków. Zmienna fields nie jest więc pojedynczym napisem, lecz listą napisów typu str.</p>
+<p>Dla przykładowej ramki GGA:</p>
+<ul>
+<li>fields[0] może zawierać &quot;$GNGGA&quot;,</li>
+<li>fields[2] może zawierać &quot;5213.5000&quot;,</li>
+<li>fields[3] może zawierać &quot;N&quot;,</li>
+<li>fields[6] może zawierać &quot;1&quot;.</li>
+</ul>
+<p>Jeżeli chcesz wykonywać obliczenia, tekst trzeba jawnie zamienić na liczbę. Przykładowo:</p>
+<pre><code>latitude_raw = float(fields[2])
+fix_quality = int(fields[6])
+satellites = int(fields[7])
+hdop = float(fields[8])
+altitude = float(fields[9])</code></pre>
+<p>Przed odwołaniem do indeksów sprawdź, czy len(fields) &gt;= 10. Obsłuż ValueError przy konwersji uszkodzonych danych. Przed użyciem float() lub int() warto sprawdzić, czy dane pole nie jest pustym napisem &quot;&quot;, ponieważ ramka bez poprawnego fixu może zawierać puste pola.</p>
+<p>Jeżeli status fixu w polu 6 jest większy od zera, wyświetl:</p>
+<ul>
+<li>czas UTC,</li>
+<li>szerokość geograficzną,</li>
+<li>długość geograficzną,</li>
+<li>liczbę satelitów,</li>
+<li>wartość HDOP,</li>
+<li>wysokość.</li>
+</ul>
+<p>Jeżeli moduł nie ma poprawnej pozycji, wyświetl komunikat NO FIX oraz — jeśli jest dostępna — liczbę satelitów.</p>
+</aside>
+<aside class="callout tip"><h3>Jeżeli w sali nie uda się uzyskać pozycji</h3>
+<p>Parser można sprawdzić na uproszczonym tekście treningowym (bez sumy kontrolnej; nie jest to kompletne zdanie NMEA):</p>
+<pre><code>$GNGGA,120000.00,5213.298718,N,02100.423738,E,1,12,0.94,112.549,M,...</code></pre>
+</aside>
+<h2>7. Zadanie końcowe: Most GPS–UART–RPi Pico B</h2>
+<p>Na zakończenie połączymy oba zastosowania UART w jeden system. RPi Pico A będzie jednocześnie:</p>
+<ul>
+<li>odbierało surowe dane NMEA z GPS przez UART1,</li>
+<li>przetwarzało ramkę GGA,</li>
+<li>wysyłało uproszczone informacje do RPi Pico B przez UART0.</li>
+</ul>
+<aside class="callout task"><h3>Zadanie 5.1 — Przekazywanie pozycji do drugiego mikrokontrolera</h3>
+<p>Zbuduj system o następującym działaniu:</p>
+<h4>RPi Pico A:</h4>
+<ol>
+<li>odbiera ramki GPS,</li>
+<li>wybiera ramki GGA,</li>
+<li>po uzyskaniu poprawnej pozycji przelicza współrzędne na stopnie dziesiętne,</li>
+<li>wysyła do RPi Pico B komunikat:</li>
+</ol>
+<pre><code>GPS,latitude,longitude,satellites,altitude</code></pre>
+<p>Na przykład:</p>
+<pre><code>GPS,52.225000,21.008333,8,110.0</code></pre>
+<p>Jeżeli pozycja nie jest dostępna, wyślij:</p>
+<pre><code>NOFIX,satellites</code></pre>
+<h4>RPi Pico B:</h4>
+<ol>
+<li>odbiera komunikat,</li>
+<li>rozdziela pola za pomocą split(&quot;,&quot;),</li>
+<li>dla komunikatu GPS wyświetla współrzędne i pozostałe dane w Thonny,</li>
+<li>dla NOFIX wyświetla informację o oczekiwaniu na pozycję,</li>
+<li>zapala wybraną diodę LED po uzyskaniu poprawnego fixu.</li>
+</ol>
+<p>Każdy komunikat zakończ znakiem \n. UART0 pozostaje ustawiony na 9600 bit/s, a UART1 na 115200 bit/s. Wysyłaj jedynie uproszczony komunikat, nie cały strumień NMEA. Po utracie fixu zgaś LED; brak nowych danych również nie powinien pozostawiać bezterminowo wskazania poprawnej pozycji.</p>
+</aside>
+<aside class="callout info"><h3>Dwa niezależne interfejsy UART</h3>
+<p>W zadaniu końcowym RPi Pico A korzysta jednocześnie z:</p>
+<ul>
+<li>UART1 — odbiór danych z GPS na GP5,</li>
+<li>UART0 — wymiana danych z RPi Pico B przez GP0/GP1.</li>
+</ul>
+<p>Jest to typowa sytuacja w systemie mikroprocesorowym: mikrokontroler odbiera informacje z jednego urządzenia, przetwarza je i przekazuje dalej innym interfejsem komunikacyjnym.</p>
+</aside>
+<h2>8. Podsumowanie</h2>
+<aside class="callout tip"><h3>Po tych zajęciach powinieneś umieć</h3>
+<ul>
+<li>poprawnie połączyć linie TX i RX dwóch urządzeń,</li>
+<li>skonfigurować UART w MicroPythonie,</li>
+<li>wyjaśnić znaczenie konfiguracji 9600 8N1,</li>
+<li>wysyłać tekst i odbierać dane typu bytes,</li>
+<li>zdekodować transmisję UART za pomocą Analog Discovery II,</li>
+<li>zaprojektować prosty protokół tekstowy,</li>
+<li>odczytać dane NMEA z modułu GPS,</li>
+<li>przeliczyć współrzędne NMEA na stopnie dziesiętne,</li>
+<li>wykorzystać dwa interfejsy UART jednocześnie.</li>
+</ul>
+</aside>
+<aside class="callout warning"><h3>Uwaga</h3>
+<p>Przed opuszczeniem stanowiska zatrzymaj programy na obu modułach Pico i usuń z ich pamięci pliki utworzone podczas tego laboratorium. Odłącz moduł GPS i uporządkuj przewody.</p>
+</aside>
+<h3>Dokumentacja</h3>
+<ul>
+<li>Waveshare LC76G GNSS Module: <a href="https://www.waveshare.com/wiki/LC76G_GNSS_Module">https://www.waveshare.com/wiki/LC76G_GNSS_Module</a></li>
+<li>MicroPython, klasa UART: <a href="https://docs.micropython.org/en/latest/library/machine.UART.html">https://docs.micropython.org/en/latest/library/machine.UART.html</a></li>
+</ul>
+</main></body></html>
