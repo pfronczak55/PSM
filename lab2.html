@@ -1,0 +1,307 @@
+<!doctype html><html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PSM — Laboratorium 2: Przerwania, timery i pomiar czasu</title><style>*{box-sizing:border-box}html{color-scheme:light}body{margin:0;background:#f2f4f7;color:#1d2939;font:17px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}main{max-width:980px;margin:32px auto;padding:40px 48px 64px;background:#fff;border:1px solid #e0e5ec;border-radius:10px}h1{font-size:2rem;line-height:1.25;margin-top:0}h2{font-size:1.5rem;line-height:1.35;margin-top:2.5em;padding-top:.7em;border-top:1px solid #dce3ec;color:#174975}h3{font-size:1.14rem;line-height:1.4;margin-top:1.8em}h4{font-size:1rem;margin-bottom:.4em}p{margin:.9em 0}li{margin:.3em 0}pre{white-space:pre;overflow-x:auto;background:#f4f6f9;color:#172638;border:1px solid #dbe2eb;border-radius:6px;padding:20px;font:14px/1.65 Consolas,"Courier New",monospace;tab-size:4;user-select:text}code{font:inherit}table{border-collapse:collapse;width:100%;margin:1.2em 0;font-size:.94rem}th,td{border:1px solid #d9e0e8;padding:9px 12px;text-align:left;vertical-align:top}th{background:#eef3f8}a{color:#075db4;overflow-wrap:anywhere}@media(max-width:680px){main{margin:0;padding:24px 18px;border:0;border-radius:0}body{font-size:16px}pre{padding:14px}table{font-size:.85rem}th,td{padding:6px}}@media print{body{background:white}main{max-width:none;border:0;margin:0;padding:0}pre{white-space:pre-wrap}h2,h3{break-after:avoid}}
+.callout{border:1.5px solid var(--accent);border-radius:8px;margin:1.6em 0;padding:0 20px 10px;background:var(--tint)}
+.callout>h3:first-child{display:table;margin:-.8em 0 .8em;padding:3px 12px;border-radius:5px;background:var(--accent);color:#fff;font-size:1rem}
+.callout.task{--accent:#a91e14;--tint:#fffafa}
+.callout.warning{--accent:#e44419;--tint:#fff8f3}
+.callout.info{--accent:#008394;--tint:#f3fbfc}
+.callout.tip{--accent:#bd7900;--tint:#fffaf0}
+.callout.measure{--accent:#6550a1;--tint:#faf8ff}
+.callout p:last-child,.callout ul:last-child,.callout ol:last-child{margin-bottom:.5em}
+@media(max-width:680px){.callout{padding-right:12px;padding-left:12px}.callout>h3:first-child{max-width:100%}}
+</style></head><body><main><h1>Podstawy Systemów Mikroprocesorowych</h1><h2>Laboratorium 2: Przerwania, timery i pomiar czasu</h2><p>Autorzy: Dariusz Tefelski, Angelika Tefelska</p>
+<h2>1 Wprowadzenie</h2>
+<aside class="callout info"><h3>Cel ćwiczenia</h3>
+<p>Celem ćwiczenia jest poznanie mechanizmów pozwalających mikrokontrolerowi reagować na zdarzenia oraz wykonywać operacje w określonych chwilach czasu.</p>
+<p>Po wykonaniu ćwiczenia student powinien:</p>
+<ul>
+<li>rozumieć różnicę pomiędzy odpytywaniem wejścia w pętli a obsługą zdarzenia za pomocą przerwania,</li>
+<li>skonfigurować przerwanie od zmiany stanu pinu GPIO,</li>
+<li>rozumieć znaczenie zbocza narastającego i opadającego,</li>
+<li>ograniczyć wpływ drgań styków przycisku,</li>
+<li>mierzyć odstępy czasu za pomocą funkcji ticks_ms() i ticks_diff(),</li>
+<li>skonfigurować timer okresowy i jednorazowy,</li>
+<li>wykorzystać dwa niezależne timery do realizacji zadań o różnych skalach czasowych,</li>
+<li>wykorzystać timer do multipleksowego sterowania wyświetlaczem 4x7-segmentowym,</li>
+<li>połączyć przerwania, timery i wyświetlacz w jeden system pomiarowy.</li>
+</ul>
+<p>Na poprzednich zajęciach przyciski były sprawdzane cyklicznie wewnątrz głównej pętli programu. Takie rozwiązanie nazywa się pollingiem. Jest ono proste, ale wymaga ciągłego wykonywania instrukcji sprawdzających stan wejścia. W systemach mikroprocesorowych często korzystniejsza jest reakcja na zdarzenie dopiero wtedy, gdy ono rzeczywiście wystąpi.</p>
+</aside>
+<aside class="callout info"><h3>Przerwanie i callback</h3>
+<p>Przerwanie powoduje chwilowe przerwanie zwykłego wykonywania programu i uruchomienie wskazanej funkcji obsługi. W MicroPythonie funkcję wywoływaną w odpowiedzi na zdarzenie często określa się nazwą callback. Po zakończeniu callbacku program kontynuuje zwykłą pracę.</p>
+<p>Jak intuicyjnie zrozumieć przerwania? Wyobraź sobie, że czytasz książkę i w pewnym momencie dzwoni telefon. Przestajesz czytać książkę, odbierasz telefon i po skończonej rozmowie wracasz do czytania książki. W tym przypadku przerwanie to dzwonek telefonu, rozmowa przez telefon to wywołanie funkcji callback a po jej zakończeniu dalsze czytanie to powrót do górnego nurtu wykonywania programu.</p>
+</aside>
+<h2>2 Wyposażenie stanowiska</h2>
+<p>Do wykonania ćwiczenia potrzebne są:</p>
+<ul>
+<li>płytka dydaktyczna z Raspberry Pi Pico 2 W,</li>
+<li>przewód USB i przewody połączeniowe,</li>
+<li>przyciski i diody LED dostępne na płytce dydaktycznej,</li>
+<li>wyświetlacz LED 4x7-segmentowy znajdujący się na płytce,</li>
+<li>Analog Discovery II do obserwacji drgań styków i przebiegów cyfrowych.</li>
+</ul>
+<p>W przykładowej konfiguracji tego laboratorium przyjmujemy następujący podział GPIO:</p>
+<table><thead><tr><th>Element</th><th>GPIO</th></tr></thead><tbody><tr><td>Przycisk reakcji</td><td>GP14</td></tr><tr><td>Dioda sygnalizacyjna</td><td>GP15</td></tr><tr><td>Przycisk START</td><td>GP16</td></tr><tr><td>Segmenty A, B, C, D, E, F, G, DP</td><td>GP2–GP9</td></tr><tr><td>Cyfry DIGIT1–DIGIT4</td><td>GP10–GP13</td></tr></tbody></table>
+<aside class="callout info"><h3>Interpretacja</h3>
+<p>Elementy płytki dydaktycznej nie są na stałe przypisane do wymienionych GPIO. Połączenia wykonuje się przewodami. Jeżeli na stanowisku użyto innego zestawu pinów, należy odpowiednio zmienić numery w programach.</p>
+</aside>
+<h2>3 Zadanie 1: Od pollingu do przerwania</h2>
+<p>Na poprzednim laboratorium stan przycisku był sprawdzany wielokrotnie w pętli. W pierwszym zadaniu zastąpimy polling przerwaniem GPIO.</p>
+<p>Przycisk jest połączony z rezystorem pull-up. W stanie spoczynku na wejściu występuje logiczna 1, a naciśnięcie zwiera wejście do masy i powoduje zmianę 1 → 0. Taka zmiana jest nazywana zboczem opadającym.</p>
+<aside class="callout task"><h3>Zadanie 1.1 — Pierwsze przerwanie GPIO</h3>
+<p>Podłącz przycisk do GP14, a diodę LED do GP15. Uruchom poniższy program:</p>
+<pre><code>from machine import Pin
+from utime import sleep
+
+button = Pin(14, Pin.IN, Pin.PULL_UP)
+led = Pin(15, Pin.OUT, value=1)
+
+def button_irq(pin):
+    print(&quot;Przerwanie&quot;)
+    led.toggle()  # Zmiana stanu na przeciwny 1-&gt;0 badz 0-&gt;1
+
+button.irq(trigger=Pin.IRQ_FALLING, handler=button_irq)
+
+while True:
+    print(&quot;Instrukcja 1&quot;)
+    sleep(1)
+    print(&quot;Instrukcja 2&quot;)
+    sleep(1)
+    print(&quot;Instrukcja 3&quot;)
+    sleep(1)</code></pre>
+<p>Uruchom program i obserwuj komunikaty w konsoli. Naciskaj przycisk w różnych momentach wykonywania programu. Sprawdź, czy obsługa przerwania wymaga oczekiwania na zakończenie funkcji sleep() w pętli głównej. Czy zawsze tylko raz wywoływało się przerwanie po naciśnięciu przycisku?</p>
+</aside>
+<aside class="callout info"><h3>Co oznacza button.irq(...)?</h3>
+<p>Metoda irq() konfiguruje zdarzenie generujące przerwanie:</p>
+<ul>
+<li>trigger=Pin.IRQ_FALLING — reakcja na zbocze opadające,</li>
+<li>handler=button_irq — funkcja, która zostanie wywołana po wystąpieniu zdarzenia.</li>
+</ul>
+<p>Funkcja obsługi musi przyjmować jeden argument. W przypadku przerwania GPIO MicroPython przekazuje do niej obiekt pinu, który wywołał przerwanie.</p>
+<p>Dlatego funkcję zapisujemy jako def button_irq(pin):, nawet jeśli w danym programie nie korzystamy z argumentu pin.</p>
+</aside>
+<aside class="callout tip"><h3>Callback powinien być krótki</h3>
+<p>W funkcji obsługi przerwania wykonuj możliwie mało operacji. Długie obliczenia, opóźnienia oraz rozbudowane operacje wejścia/wyjścia mogą opóźniać obsługę kolejnych zdarzeń. W większych programach callback często jedynie ustawia flagę lub zapisuje wynik pomiaru, a właściwe działania wykonuje główna część programu.</p>
+</aside>
+<h2>4 Zadanie 2: Drgania styków i pomiar czasu</h2>
+<p>Mechaniczny przycisk nie przechodzi zawsze idealnie i natychmiastowo pomiędzy stanem 0 i 1. Podczas naciskania i zwalniania styki mogą przez krótki czas wielokrotnie zwierać się i rozwierać. Zjawisko to nazywamy drganiami styków (ang. contact bounce).</p>
+<aside class="callout task"><h3>Zadanie 2.1 — Licznik naciśnięć</h3>
+<p>Zmodyfikuj program z poprzedniego zadania tak, aby każde przerwanie zwiększało zmienną counter. W głównej pętli wyświetlaj jej aktualną wartość.</p>
+<p>Naciśnij przycisk kilkanaście razy. Sprawdź, czy licznik zawsze zwiększa się dokładnie o 1 na jedno fizyczne naciśnięcie.</p>
+</aside>
+<aside class="callout measure"><h3>Pomiar 2.1 — Czy przycisk naprawdę zmienia stan tylko raz?</h3>
+<p>Korzystając z Analog Discovery II, zarejestruj sygnał na wejściu przycisku podczas pojedynczego naciśnięcia i zwolnienia. Spróbuj zaobserwować krótkie, wielokrotne zmiany stanu.</p>
+<p>Do odmierzania czasu w MicroPythonie można wykorzystać licznik milisekund:</p>
+<pre><code>from utime import ticks_ms, ticks_diff
+
+start = ticks_ms()
+# ...
+elapsed = ticks_diff(ticks_ms(), start)</code></pre>
+</aside>
+<aside class="callout info"><h3>Dlaczego używamy ticks_diff()?</h3>
+<p>Licznik zwracany przez ticks_ms() po bardzo długim czasie przepełnia się i zaczyna ponownie od początku zakresu. Funkcja ticks_diff() poprawnie oblicza różnicę pomiędzy dwiema wartościami licznika również w pobliżu tego przepełnienia. Dlatego do pomiaru odstępów czasu jest bezpieczniejsza niż zwykłe odejmowanie.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 2.2 — Programowe usuwanie drgań styków</h3>
+<p>Wprowadź minimalny odstęp pomiędzy zaakceptowanymi przerwaniami. Wykorzystaj poniższy schemat:</p>
+<pre><code>from machine import Pin
+from utime import ticks_ms, ticks_diff, sleep
+
+button = Pin(14, Pin.IN, Pin.PULL_UP)
+
+counter = 0
+last_press = 0
+
+def button_irq(pin):
+    global counter, last_press
+
+    now = ticks_ms()
+    if ticks_diff(now, last_press) &gt; 50:
+        counter += 1
+        last_press = now
+
+button.irq(trigger=Pin.IRQ_FALLING, handler=button_irq)
+
+while True:
+    print(&quot;Counter&quot;, counter)
+    sleep(1)</code></pre>
+<p>Podwójne sprawdzenie stanu przycisku z reguły pomaga wyeliminować efekt drgania styków. Sprawdź działanie dla kilku wartości czasu eliminacji drgań, np. 10 ms, 50 ms i 200 ms. Która wartość zapewnia poprawne działanie, a jednocześnie nie utrudnia szybkiego naciskania przycisku?</p>
+</aside>
+<h2>5 Zadanie 3: Timery</h2>
+<p>Timer umożliwia wykonanie funkcji po określonym czasie lub cyklicznie w zadanym odstępie. Na Raspberry Pi Pico 2 W w MicroPythonie korzystamy z klasy Timer.</p>
+<p>Dwa podstawowe tryby pracy to:</p>
+<ul>
+<li>Timer.PERIODIC — callback wykonywany cyklicznie,</li>
+<li>Timer.ONE_SHOT — callback wykonywany tylko jeden raz po upływie zadanego czasu.</li>
+</ul>
+<aside class="callout task"><h3>Zadanie 3.1 — Timer okresowy</h3>
+<p>Uruchom program, który zmienia stan diody co 250 ms bez użycia funkcji sleep() w głównej pętli:</p>
+<pre><code>from machine import Pin, Timer
+from utime import sleep
+
+led = Pin(15, Pin.OUT, value=1)
+
+def timer_callback(timer):
+    led.toggle()
+
+timer = Timer()
+timer.init(period=250, mode=Timer.PERIODIC, callback=timer_callback)
+
+while True:
+    print(&quot;Petla glowna moze wykonywac inne zadania&quot;)
+    sleep(1)</code></pre>
+</aside>
+<aside class="callout measure"><h3>Pomiar 3.1 — Okres sygnału z timera</h3>
+<p>Podłącz oscyloskop do pinu sterującego diodą. Zmierz okres i częstotliwość przebiegu. Porównaj wynik z wartością oczekiwaną na podstawie programu.</p>
+<p>Następnie zmień period na 100 ms i ponownie wykonaj pomiar.</p>
+</aside>
+<aside class="callout task"><h3>Zadanie 3.2 — Timer jednorazowy</h3>
+<p>Zmodyfikuj program tak, aby po uruchomieniu odczekał 2 s, a następnie jednokrotnie zapalił diodę. Użyj trybu Timer.ONE_SHOT.</p>
+<p>Po wykonaniu callbacku dioda ma pozostać zapalona. Nie używaj sleep(2) do realizacji opóźnienia.</p>
+</aside>
+<h2>6 Zadanie 4: Wyświetlacz 4x7-segmentowy i multipleksowanie</h2>
+<p>Płytka dydaktyczna jest wyposażona w czterocyfrowy wyświetlacz LED 7-segmentowy.</p>
+<p>Każda cyfra składa się z segmentów A–G oraz kropki dziesiętnej DP. Linie segmentów są wspólne dla wszystkich czterech cyfr, natomiast linie DIGIT1–DIGIT4 wybierają aktualnie aktywną cyfrę.</p>
+<pre aria-label="Układ segmentów wyświetlacza">   --- A ---
+  |         |
+  F         B
+  |         |
+   --- G ---
+  |         |
+  E         C
+  |         |
+   --- D ---   DP</pre>
+<p>W proponowanej konfiguracji połącz:</p>
+<table><thead><tr><th>Segment</th><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th><th>DP</th></tr></thead><tbody><tr><td>GPIO</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr></tbody></table>
+<table><thead><tr><th>Cyfra</th><th>DIGIT1</th><th>DIGIT2</th><th>DIGIT3</th><th>DIGIT4</th></tr></thead><tbody><tr><td>GPIO</td><td>10</td><td>11</td><td>12</td><td>13</td></tr></tbody></table>
+<p>Na płytce linie sterujące wyświetlaczem pracują w logice aktywnej stanem niskim: dla aktywnego segmentu lub cyfry ustawiamy wartość 0.</p>
+<aside class="callout task"><h3>Zadanie 4.1 — Wyświetlenie jednej cyfry</h3>
+<p>Podłącz wyświetlacz zgodnie z tabelami. Następnie uruchom program, który ustawi cyfrę 2 na pierwszym wyświetlaczu:</p>
+<pre><code>from machine import Pin
+
+segments = [Pin(pin, Pin.OUT, value=1) for pin in range(2, 10)]
+digits = [Pin(pin, Pin.OUT, value=1) for pin in range(10, 14)]
+
+# Kolejnosc: A, B, C, D, E, F, G, DP
+pattern_2 = (0, 0, 1, 0, 0, 1, 0, 1)
+
+digits[0].value(0)  # Wlaczenie cyfry nr 1
+
+while True:
+    for i, seg in enumerate(segments):
+        seg.value(pattern_2[i])</code></pre>
+<p>Jeżeli chcemy niezależnie wyświetlić cztery cyfry, nie możemy pozostawić wszystkich linii DIGIT aktywnych jednocześnie, ponieważ wszystkie pozycje otrzymałyby ten sam wzorzec segmentów. Zamiast tego szybko przełączamy kolejne cyfry:</p>
+<p>DIGIT1 → DIGIT2 → DIGIT3 → DIGIT4 → DIGIT1 → ...</p>
+<p>Zjawisko bezwładności wzroku sprawia, że przy odpowiednio dużej częstotliwości człowiek widzi cztery świecące cyfry jednocześnie. Taki sposób sterowania nazywamy multipleksowaniem.</p>
+</aside>
+<aside class="callout info"><h3>Tablica wzorców cyfr</h3>
+<p>W logice aktywnej stanem niskim można użyć następujących wzorców. Kolejność elementów to A, B, C, D, E, F, G, DP.</p>
+<pre><code>PATTERNS = (
+    (0,0,0,0,0,0,1,1),  # 0
+    (1,0,0,1,1,1,1,1),  # 1
+    (0,0,1,0,0,1,0,1),  # 2
+    (0,0,0,0,1,1,0,1),  # 3
+    (1,0,0,1,1,0,0,1),  # 4
+    (0,1,0,0,1,0,0,1),  # 5
+    (0,1,0,0,0,0,0,1),  # 6
+    (0,0,0,1,1,1,1,1),  # 7
+    (0,0,0,0,0,0,0,1),  # 8
+    (0,0,0,0,1,0,0,1)   # 9
+)</code></pre>
+</aside>
+<aside class="callout task"><h3>Zadanie 4.2 — Multipleksowanie z użyciem dwóch timerów</h3>
+<p>W tym zadaniu wykorzystamy dwa niezależne timery okresowe. Pierwszy będzie odpowiedzialny za szybkie odświeżanie kolejnych pozycji wyświetlacza, natomiast drugi będzie zmieniał liczbę, którą chcemy wyświetlić.</p>
+<p>Przygotuj zmienne przechowujące aktualnie wyświetlaną wartość oraz numer aktualnie odświeżanej pozycji:</p>
+<pre><code>display_value = 0
+current_digit = 0</code></pre>
+<p>Napisz funkcję pomocniczą, która na podstawie liczby z zakresu 0–9999 utworzy listę czterech cyfr. Przykładowo dla liczby 37 powinna powstać lista:</p>
+<p>[0, 0, 3, 7] Możesz wykorzystać dzielenie całkowite // oraz operator reszty z dzielenia %.</p>
+<p>Następnie przygotuj dwa callbacki:</p>
+<ol>
+<li>callback odświeżania wyświetlacza — przy każdym wywołaniu:</li>
+</ol>
+<ul>
+<li>wyłącza wszystkie cztery cyfry,</li>
+<li>wybiera odpowiednią cyfrę z aktualnej wartości,</li>
+<li>ustawia wzorzec segmentów,</li>
+<li>włącza jedną pozycję wyświetlacza,</li>
+<li>przechodzi do kolejnej pozycji;</li>
+</ul>
+<ol>
+<li>callback licznika — zwiększa wyświetlaną wartość o 1. Po przekroczeniu 9999 licznik powinien rozpocząć zliczanie ponownie od 0.</li>
+</ol>
+<p>Uruchom dwa timery okresowe:</p>
+<pre><code>refresh_timer = Timer()
+counter_timer = Timer()
+
+refresh_timer.init(period=3, mode=Timer.PERIODIC, callback=refresh_display)
+counter_timer.init(period=1000, mode=Timer.PERIODIC, callback=increment_counter)</code></pre>
+<p>Pierwszy timer powinien działać z okresem około 2–4 ms, natomiast drugi początkowo z okresem 1000 ms. Dzięki temu wyświetlacz jest odświeżany kilkaset razy na sekundę, podczas gdy prezentowana liczba zwiększa się raz na sekundę.</p>
+<p>Sprawdź działanie programu, a następnie:</p>
+<ol>
+<li>zmień okres timera counter_timer na 200 ms i obserwuj licznik,</li>
+<li>zwiększaj okres timera refresh_timer, aż migotanie wyświetlacza stanie się zauważalne,</li>
+<li>sprawdź, czy zmiana szybkości zliczania wpływa na częstotliwość odświeżania wyświetlacza.</li>
+</ol>
+</aside>
+<aside class="callout info"><h3>Dwa timery — dwa niezależne zadania</h3>
+<p>W tym programie oba timery działają niezależnie od siebie. Timer refresh_timer realizuje zadanie wymagające dużej częstotliwości — multipleksowanie wyświetlacza. Timer counter_timer wykonuje znacznie wolniejsze zadanie — zmianę wyświetlanej wartości.</p>
+<p>Jest to przykład sytuacji, w której mikrokontroler wykonuje kilka czynności o różnych skalach czasowych bez stosowania funkcji sleep() do odmierzania czasu w głównej części programu.</p>
+</aside>
+<aside class="callout tip"><h3>Callbacki timerów powinny być krótkie</h3>
+<p>Funkcje wywoływane przez timery powinny wykonywać tylko niezbędne operacje. W szczególności callback odpowiedzialny za odświeżanie wyświetlacza jest wywoływany bardzo często, dlatego nie należy umieszczać w nim funkcji print(), opóźnień ani rozbudowanych obliczeń.</p>
+</aside>
+<aside class="callout tip"><h3>Dlaczego najpierw wyłączamy wszystkie cyfry?</h3>
+<p>Zmiana segmentów przy aktywnej cyfrze może na krótko powodować wyświetlenie niepożądanego wzorca. Wyłączenie wszystkich pozycji przed zmianą segmentów ogranicza efekt tzw. ghostingu.</p>
+</aside>
+<h2>7 Zadanie dodatkowe: Refleksomierz</h2>
+<p>Na zakończenie wykorzystamy przerwanie GPIO, timer jednorazowy, pomiar czasu i wyświetlacz 7-segmentowy w jednym urządzeniu.</p>
+<aside class="callout task"><h3>Zadanie 5.1 — Pomiar czasu reakcji</h3>
+<p>Zbuduj refleksomierz spełniający następującą specyfikację:</p>
+<ol>
+<li>naciśnięcie przycisku START rozpoczyna próbę,</li>
+<li>dioda sygnalizacyjna pozostaje zgaszona przez losowy czas z zakresu około 1–3 s,</li>
+<li>odliczanie losowego czasu zrealizuj za pomocą timera Timer.ONE_SHOT,</li>
+<li>po upływie czasu timer zapala diodę i zapisuje chwilę rozpoczęcia pomiaru za pomocą ticks_ms(),</li>
+<li>naciśnięcie przycisku reakcji jest obsługiwane przez przerwanie GPIO,</li>
+<li>czas reakcji oblicz za pomocą ticks_diff(),</li>
+<li>wynik w milisekundach wyświetl na wyświetlaczu 4x7-segmentowym,</li>
+<li>kolejne naciśnięcie START rozpoczyna nową próbę.</li>
+</ol>
+<p>Wynik powinien pozostać na wyświetlaczu do momentu rozpoczęcia kolejnej próby.</p>
+</aside>
+<aside class="callout info"><h3>Podpowiedź organizacyjna — stany programu</h3>
+<p>W wygodnym rozwiązaniu program może przechowywać aktualny stan, np.:</p>
+<p>IDLE → WAIT → GO → RESULT Przerwanie od przycisku reakcji może wtedy zachowywać się inaczej zależnie od tego, czy system czeka na sygnał START, czy pomiar już się rozpoczął.</p>
+</aside>
+<aside class="callout tip"><h3>Rozszerzenie dla chętnych</h3>
+<p>Wykonaj 5 prób i zapamiętaj najlepszy wynik. Po każdej próbie pokaż aktualny czas, a po zakończeniu serii wyświetl najlepszy rezultat.</p>
+</aside>
+<h2>8 Podsumowanie</h2>
+<aside class="callout tip"><h3>Po tych zajęciach powinieneś umieć</h3>
+<ul>
+<li>skonfigurować przerwanie GPIO na wybrane zbocze,</li>
+<li>wyjaśnić, czym różni się polling od obsługi przerwaniowej,</li>
+<li>ograniczyć wpływ drgań styków przycisku,</li>
+<li>mierzyć odstępy czasu funkcjami ticks_ms() i ticks_diff(),</li>
+<li>uruchomić timer okresowy i jednorazowy,</li>
+<li>wyjaśnić zasadę multipleksowania wyświetlacza 4x7-segmentowego,</li>
+<li>wykorzystać dwa niezależne timery okresowe w jednym programie,</li>
+<li>wykorzystać timer do cyklicznego odświeżania wyświetlacza,</li>
+<li>połączyć kilka mechanizmów asynchronicznych w jeden program.</li>
+</ul>
+</aside>
+<aside class="callout warning"><h3>Uwaga</h3>
+<p>Przed opuszczeniem stanowiska zatrzymaj program, wyczyść pamięć (patrz niżej) i uporządkuj przewody oraz elementy używane podczas ćwiczenia.</p>
+<p>Wyczyść mikrokontroler w ten sam sposób co na laboratoriach nr 0:</p>
+<ol>
+<li>Pobierz plik flash_nuke.uf2 z sekcji Resetting flash memory dokumentacji Raspberry Pi:</li>
+</ol>
+<p><a href="https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html#resetting-flash-memory">https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html#resetting-flash-memory</a></p>
+<ol>
+<li>Ustaw przełącznik zasilania używanego modułu Pico w pozycji OFF.</li>
+<li>Naciśnij i przytrzymaj przycisk BOOTSEL, a następnie włącz zasilanie modułu przełącznikiem ON.</li>
+<li>Po pojawieniu się dysku USB zwolnij przycisk BOOTSEL.</li>
+<li>Skopiuj plik flash_nuke.uf2 na wykryty dysk. Mikrokontroler automatycznie uruchomi program czyszczący i wyczyści pamięć flash.</li>
+<li>Nie wgrywaj ponownie MicroPythona. Następna grupa sama go wgra przed rozpoczęciem laboratoriów.</li>
+</ol>
+</aside>
+</main></body></html>
