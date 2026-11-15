@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSM — Laboratorium 6: SPI — ADC, DAC i wyświetlacz TFT</title>
+<style>
+:root{--txt:#111;--code-bg:#f8f8f8;--code-bd:#bfbfbf}
+*{box-sizing:border-box}
+html{background:#e9e9e9}
+body{margin:0 auto;max-width:860px;background:#fff;color:var(--txt);padding:48px 64px 80px;
+ font-family:"Latin Modern Roman","CMU Serif","Computer Modern Serif","TeX Gyre Termes",Georgia,"Times New Roman",serif;
+ font-size:17px;line-height:1.5;box-shadow:0 0 12px rgba(0,0,0,.12)}
+@media (max-width:700px){body{padding:24px 16px 48px;font-size:16px}}
+a{color:#1a0dab}
+p{margin:.45em 0}
+h2{font-size:1.45em;margin:1.8em 0 .6em;font-weight:bold}
+h3{font-size:1.18em;margin:1.4em 0 .5em;font-weight:bold}
+h2 .num,h3 .num{display:inline-block;min-width:2.1em}
+h3 .num{min-width:2.6em}
+.title{text-align:center;padding:70px 0 40px}
+.title h1{font-size:1.75em;font-weight:normal;margin:0 0 .6em;line-height:1.3}
+.title hr{width:60%;border:0;border-top:1px solid #7b2fa8;margin:0 auto 1em}
+.title .sub{font-size:1.1em}.title .auth{font-size:.92em;margin-top:1.5em}
+.toc h2{margin-top:1em}
+.toc ol{list-style:none;padding:0;margin:0}
+.toc>ol>li{margin:.55em 0;font-weight:bold}
+.toc ol ol{margin:.15em 0 0 1.6em;font-weight:normal;font-size:.95em}
+.toc a{color:inherit;text-decoration:none}.toc a:hover{text-decoration:underline}
+.toc span{display:inline-block;min-width:2.1em}
+ul,ol{margin:.4em 0;padding-left:1.8em}
+li{margin:.25em 0}
+ul.tight li,ol.tight li{margin:.05em 0}
+code.tt{font-family:"Latin Modern Mono","CMU Typewriter Text","DejaVu Sans Mono",Consolas,monospace;font-size:.92em}
+.disp{text-align:center;margin:.5em 0}
+table.bt2{border-collapse:collapse;margin:.7em auto}
+table.bt2 th{font-weight:bold;border-bottom:1px solid #000;padding:2px 10px;text-align:left}
+table.bt2 td{padding:1px 10px}
+table.bt2 th+th,table.bt2 td+td{border-left:1px solid #000}
+table.fill td{min-width:9em}table.fill td+td{min-width:10em}
+table.fill tbody tr td{border-bottom:1px dotted #bbb;height:1.6em}
+figure{margin:1.2em 0;text-align:center}
+figure img{max-width:100%;height:auto}
+figcaption{text-align:left;margin-top:.5em}
+.eq{display:flex;align-items:center;margin:.6em 0}
+.eq math{flex:1;font-size:1.05em}
+.eqn{min-width:2.5em;text-align:right}
+/* boxes */
+.box{--c:#007f8d;--bg:#f2f9f9;position:relative;border:1.3px solid var(--c);background:var(--bg);border-radius:7px;
+ margin:2.1em 0 1.2em;padding:1em 1em .7em}
+.box.hasic{padding-left:3.4em}
+.box>.bt{position:absolute;top:0;left:2.4em;transform:translateY(-55%);background:var(--c);color:#fff;
+ padding:.1em .7em;border-radius:3px;font-size:1em;line-height:1.35}
+.box>.bt code.tt{color:#fff}
+.box>.ic{position:absolute;left:.7em;top:1em;width:1.9em;height:1.9em;color:var(--c)}
+.box>.ic svg{width:100%;height:100%;display:block}
+.box.task{--c:#991006;--bg:#faf3f3}
+.box.info{--c:#007f8d;--bg:#f2f9f9}
+.box.warn{--c:#e53312;--bg:#fef5f3}
+.box.tip{--c:#004a6c;--bg:#f2f6f8}
+.box.meas{--c:#008000;--bg:#fff;border-radius:3px;padding-top:2.3em;border-width:1.6px}
+.box.final{--c:#6a1b9a;--bg:#fff;border-radius:3px;padding-top:2.3em;border-width:1.6px}
+.box.meas>.bt,.box.final>.bt{left:0;right:0;transform:none;border-radius:0;padding:.25em 1em;font-weight:bold}
+.box .box{margin-left:.2em;margin-right:.2em}
+/* code */
+pre.code{background:var(--code-bg);border:1px solid var(--code-bd);margin:.6em 0;padding:.45em .6em .45em 0;
+ overflow-x:auto;font-family:"DejaVu Sans Mono","Latin Modern Mono",Consolas,Menlo,monospace;font-size:.82em;line-height:1.55;
+ counter-reset:ln;tab-size:4}
+pre.code code{display:block;white-space:pre}
+pre.code .ln{counter-increment:ln}
+pre.code .ln::before{content:counter(ln);display:inline-block;width:2.6em;padding-right:.9em;margin-right:.3em;text-align:right;
+ color:#999;font-size:.8em;user-select:none;-webkit-user-select:none}
+pre.code .k{color:#2a3fbf}
+pre.code .b{color:#8a2be2}
+pre.code .s{color:#c25f00}
+pre.code .c{color:#2e7d32;font-style:italic}
+pre.code.plain{padding-left:.8em;counter-reset:none}
+ul.dash{list-style:'– '}
+@media print{html{background:#fff}body{box-shadow:none;max-width:none;padding:0}.box,pre.code,figure{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header class="title">
+<h1>Podstawy Systemów Mikroprocesorowych<br>Laboratorium</h1>
+<hr>
+<p class="sub">Laboratorium 6: SPI — ADC, DAC i wyświetlacz TFT</p>
+<p class="auth">Autorzy: Dariusz Tefelski, Angelika Tefelska</p>
+</header>
+
+<nav class="toc">
+<h2 class="nonum">Spis treści</h2>
+<ol>
+<li><a href="#s1"><span>1</span>Wprowadzenie</a>
+  <ol><li><a href="#s1-1"><span>1.1</span>Tryby SPI</a></li></ol></li>
+<li><a href="#s2"><span>2</span>Wyposażenie stanowiska</a></li>
+<li><a href="#s3"><span>3</span>Zadanie 1: Konfiguracja magistrali SPI</a></li>
+<li><a href="#s4"><span>4</span>Zadanie 2: Przetwornik cyfrowo-analogowy MCP4921</a>
+  <ol><li><a href="#s4-1"><span>4.1</span>Połączenie MCP4921</a></li></ol></li>
+<li><a href="#s5"><span>5</span>Zadanie 3: Obserwacja transmisji SPI</a></li>
+<li><a href="#s6"><span>6</span>Zadanie 4: Zewnętrzny przetwornik ADC MCP3202</a>
+  <ol><li><a href="#s6-1"><span>6.1</span>Połączenie MCP3202</a></li></ol></li>
+<li><a href="#s7"><span>7</span>Zadanie 5: Wyświetlacz graficzny ST7789V</a>
+  <ol><li><a href="#s7-1"><span>7.1</span>Połączenie wyświetlacza</a></li></ol></li>
+<li><a href="#s8"><span>8</span>Zadanie 6: Trzy urządzenia na jednej magistrali SPI</a></li>
+<li><a href="#s9"><span>9</span>Podsumowanie</a></li>
+</ol>
+</nav>
+
+<h2 id="s1"><span class="num">1</span>Wprowadzenie</h2>
+<section class="box task hasic"><div class="bt">Cel ćwiczenia</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Celem ćwiczenia jest poznanie synchronicznego interfejsu szeregowego SPI oraz wykorzystanie go do komunikacji z zewnętrznym przetwornikiem cyfrowo-analogowym MCP4921, analogowo-cyfrowym MCP3202 oraz graficznym wyświetlaczem TFT HC28010-D ze sterownikiem ST7789V. Wszystkie trzy urządzenia zostaną podłączone do wspólnej magistrali SPI, ale będą wybierane niezależnymi liniami CS.</p></div></section><p>Na Laboratorium 5 poznaliśmy I<sup>2</sup>C, gdzie wiele urządzeń współdzieli dwie linie i jest rozróżnianych na podstawie adresów. SPI działa inaczej. Urządzenia mogą współdzielić linie zegara i danych, ale każde urządzenie jest zazwyczaj wybierane osobnym sygnałem <b>CS</b> (<i>Chip Select</i>).</p><section class="box info hasic"><div class="bt">Podstawowe linie SPI</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Typowa magistrala SPI wykorzystuje:</p>
+<ul class="tight">
+<li><b>SCK</b> (<i>Serial Clock</i>) — sygnał zegarowy generowany przez urządzenie sterujące,</li>
+<li><b>MOSI</b> (<i>Controller Out, Peripheral In</i>) — dane wysyłane z mikrokontrolera do urządzenia,</li>
+<li><b>MISO</b> (<i>Controller In, Peripheral Out</i>) — dane wysyłane z urządzenia do mikrokontrolera,</li>
+<li><b>CS</b> (<i>Chip Select</i>) — wybór konkretnego urządzenia, najczęściej aktywny stanem niskim.</li></ul>
+<p>W starszej dokumentacji spotkasz również rozwinięcia:</p>
+<p class="disp">MOSI = <i>Master Out, Slave In</i>,&emsp;&emsp;MISO = <i>Master In, Slave Out</i>.</p></div></section><section class="box info hasic"><div class="bt">SPI jest transmisją synchroniczną i pełnodupleksową</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Każdy impuls SCK może jednocześnie przesuwać jeden bit w obu kierunkach: przez MOSI oraz MISO. Oznacza to, że podczas każdej transmisji mikrokontroler jednocześnie <b>wysyła i odbiera</b> dane, nawet jeżeli w konkretnym urządzeniu interesuje nas tylko jeden z tych kierunków.</p>
+<p>MCP4921 wykorzystuje jedynie kierunek mikrokontroler → DAC, natomiast MCP3202 wymaga zarówno wysłania konfiguracji, jak i odebrania wyniku pomiaru.</p></div></section><h3 id="s1-1"><span class="num">1.1</span>Tryby SPI</h3>
+<p>Urządzenia SPI muszą uzgodnić nie tylko częstotliwość zegara, ale również sposób interpretacji zboczy SCK. Określają to parametry:</p>
+<ul><li><b>CPOL</b> — poziom spoczynkowy zegara,</li><li><b>CPHA</b> — zbocze, na którym odbiornik próbkuje dane.</li></ul>
+<p>W MicroPythonie odpowiadają im argumenty:</p>
+<p class="disp"><code class="tt">polarity</code> oraz <code class="tt">phase</code>.</p>
+<p>W tym laboratorium wykorzystamy <b>SPI Mode 0</b>:</p>
+<p class="disp"><code class="tt">polarity=0</code>,&emsp;&emsp;<code class="tt">phase=0</code>.</p>
+
+<h2 id="s2"><span class="num">2</span>Wyposażenie stanowiska</h2>
+<p>Do wykonania ćwiczenia potrzebne są:</p>
+<ul>
+<li>płytka dydaktyczna z Raspberry Pi Pico 2 W,</li>
+<li>przewód USB i przewody połączeniowe,</li>
+<li>przetwornik DAC MCP4921 znajdujący się na płytce,</li>
+<li>przetwornik ADC MCP3202 znajdujący się na płytce,</li>
+<li>potencjometr POT1 na płytce,</li>
+<li>wyświetlacz graficzny HC28010-D ze sterownikiem ST7789V znajdujący się na płytce,</li>
+<li>Analog Discovery II z programem WaveForms.</li>
+</ul>
+<p>W tym laboratorium wykorzystamy sprzętowy interfejs SPI0:</p>
+<table class="bt2"><thead><tr><th>Sygnał</th><th>Raspberry Pi Pico 2 W</th></tr></thead><tbody>
+<tr><td>MISO</td><td><code class="tt">GP16</code></td></tr><tr><td>SCK</td><td><code class="tt">GP18</code></td></tr><tr><td>MOSI</td><td><code class="tt">GP19</code></td></tr></tbody></table>
+<p>Linie CS będą zwykłymi wyjściami GPIO:</p>
+<ul><li>MCP4921: <code class="tt">GP17</code>,</li><li>MCP3202: <code class="tt">GP20</code>,</li><li>wyświetlacz ST7789V: <code class="tt">GP21</code>.</li></ul>
+<p>Wyświetlacz wymaga dodatkowo:</p>
+<ul><li>D/C: <code class="tt">GP22</code>,</li><li>RST: <code class="tt">GP28</code>,</li><li>BL: <code class="tt">GP27</code>.</li></ul>
+<section class="box warn hasic"><div class="bt">Uwaga</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M569.5 440C588 472 564.8 512 527.9 512H48.1c-36.9 0-60-40.1-41.6-72L246.4 24c18.5-32 64.7-32 83.2 0l239.9 416zM288 354a46 46 0 1 0 0 92 46 46 0 0 0 0-92zm-43.7-165.3 7.4 136c.3 6.4 5.6 11.3 12 11.3h48.5c6.4 0 11.6-5 12-11.3l7.4-136c.4-6.9-5.1-12.7-12-12.7h-63.4c-6.9 0-12.4 5.8-12 12.7z"/></svg></div><div class="bb"><p>Przed zmianą połączeń wyłącz zasilanie. W całym laboratorium przetworniki zasilaj napięciem <b>3,3&nbsp;V</b>. Dzięki temu również sygnały analogowe pozostają w bezpiecznym zakresie wejść Raspberry Pi Pico 2 W.</p></div></section><h2 id="s3"><span class="num">3</span>Zadanie 1: Konfiguracja magistrali SPI</h2><section class="box task hasic"><div class="bt">Zadanie 1.1 — Sprawdzenie dokumentacji</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Odszukaj dokumentacje układów MCP4921 i MCP3202:</p>
+<p class="disp"><a href="https://www.microchip.com/en-us/product/MCP4921"><code class="tt">https://www.microchip.com/en-us/product/MCP4921</code></a><br>
+<a href="https://www.microchip.com/en-us/product/MCP3202"><code class="tt">https://www.microchip.com/en-us/product/MCP3202</code></a></p>
+<p>W dokumentacji znajdź:</p>
+<ol class="tight"><li>informację, jakie tryby SPI obsługuje MCP4921,</li><li>informację, jakie tryby SPI obsługuje MCP3202,</li><li>maksymalną częstotliwość zegara SPI obu układów,</li><li>informację, na którym zboczu SCK dane są próbkowane.</li></ol>
+<p>Sprawdź, czy oba układy mogą pracować w trybie używanym podczas tego laboratorium.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 1.2 — Inicjalizacja SPI0</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span>, <span class="b">SPI</span></span>
+<span class="ln"></span>
+<span class="ln">spi = <span class="b">SPI</span>(</span>
+<span class="ln">    0,</span>
+<span class="ln">    baudrate=1_000_000,</span>
+<span class="ln">    polarity=0,</span>
+<span class="ln">    phase=0,</span>
+<span class="ln">    bits=8,</span>
+<span class="ln">    firstbit=<span class="b">SPI</span>.MSB,</span>
+<span class="ln">    sck=<span class="b">Pin</span>(18),</span>
+<span class="ln">    mosi=<span class="b">Pin</span>(19),</span>
+<span class="ln">    miso=<span class="b">Pin</span>(16)</span>
+<span class="ln">)</span>
+<span class="ln"></span>
+<span class="ln"><span class="b">print</span>(spi)</span></code></pre></div></section><section class="box info hasic"><div class="bt">SPI nie zarządza automatycznie linią CS</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Obiekt <code class="tt">SPI</code> obsługuje linie SCK, MOSI i MISO. Linię CS najczęściej sterujemy niezależnie jako zwykłe wyjście GPIO.</p>
+<p>Przykładowo, jeżeli CS urządzenia został podłączony do <code class="tt">GP17</code>, najpierw tworzymy obiekt <code class="tt">Pin</code>:</p><pre class="code"><code><span class="ln">cs = <span class="b">Pin</span>(17, <span class="b">Pin</span>.OUT, value=1)</span></code></pre>
+<p>Argument <code class="tt">Pin.OUT</code> konfiguruje pin jako wyjście. Wartość początkowa <code class="tt">value=1</code> pozostawia urządzenie <b>nieaktywne</b>, ponieważ w większości układów SPI — w tym MCP4921 i MCP3202 — linia CS jest aktywna stanem niskim.</p>
+<p>Schemat pojedynczej transakcji wygląda więc typowo tak:</p><pre class="code"><code><span class="ln">cs.value(0)         <span class="c"># wybierz urzadzenie</span></span>
+<span class="ln">spi.write(data)</span>
+<span class="ln">cs.value(1)         <span class="c"># zakoncz transakcje</span></span></code></pre>
+<p>Jeżeli do tej samej magistrali podłączonych jest kilka urządzeń, w danym momencie aktywna powinna być tylko linia CS urządzenia, z którym chcemy się komunikować.</p></div></section><h2 id="s4"><span class="num">4</span>Zadanie 2: Przetwornik cyfrowo-analogowy MCP4921</h2>
+<p>MCP4921 jest 12-bitowym przetwornikiem DAC. Otrzymuje przez SPI 16-bitowe słowo składające się z:</p>
+<ul><li>4 bitów konfiguracyjnych,</li><li>12-bitowej wartości cyfrowej.</li></ul>
+<p>Dla <i>V</i><sub>REF</sub> = 3,3&nbsp;V i wzmocnienia 1× idealne napięcie wyjściowe wynosi:</p>
+<div class="eq"><math display="block"><msub><mi>U</mi><mtext>OUT</mtext></msub><mo>=</mo><msub><mi>V</mi><mtext>REF</mtext></msub><mo>&#x2062;</mo><mfrac><mi>N</mi><mn>4096</mn></mfrac><mo>,</mo></math><span class="eqn">(1)</span></div>
+<p>gdzie <i>N</i> przyjmuje wartości od 0 do 4095.</p>
+<h3 id="s4-1"><span class="num">4.1</span>Połączenie MCP4921</h3>
+<p>Wykonaj połączenia:</p>
+<table class="bt2"><thead><tr><th>MCP4921</th><th>Połączenie</th></tr></thead><tbody>
+<tr><td>VDD</td><td>3,3&nbsp;V</td></tr><tr><td>VREF</td><td>3,3&nbsp;V</td></tr><tr><td>VSS</td><td>GND</td></tr>
+<tr><td>SCK</td><td><code class="tt">GP18</code></td></tr><tr><td>SDI</td><td><code class="tt">GP19</code></td></tr><tr><td>CS</td><td><code class="tt">GP17</code></td></tr>
+<tr><td>LDAC</td><td>GND</td></tr><tr><td>VOUT</td><td>Analog Discovery II</td></tr></tbody></table><section class="box task hasic"><div class="bt">Zadanie 2.1 — Format słowa wysyłanego do DAC</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Odszukaj w dokumentacji MCP4921 opis 16-bitowego słowa zapisu. Zidentyfikuj bity:</p>
+<ul class="tight"><li>BUF,</li><li>GA,</li><li>SHDN,</li><li>D11–D0.</li></ul>
+<p>W tym laboratorium użyjemy konfiguracji:</p>
+<ul class="tight"><li>wejście VREF niebuforowane,</li><li>wzmocnienie 1×,</li><li>wyjście DAC aktywne.</li></ul>
+<p>Dla takiej konfiguracji cztery najbardziej znaczące bity można zapisać jako wartość <code class="tt">0x3</code>. Dlatego kompletne 16-bitowe słowo przygotujemy przez:</p><pre class="code"><code><span class="ln">word = 0x3000 | value</span></code></pre>
+<p>gdzie <code class="tt">value</code> jest liczbą od 0 do 4095.</p></div></section><section class="box info hasic"><div class="bt">Co robi operator <code class="tt">|</code>?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Operator <code class="tt">|</code> wykonuje bitową operację OR.</p>
+<p>Stała:</p><p class="disp"><code class="tt">0x3000</code></p>
+<p>ustawia wymagane bity konfiguracyjne, natomiast <code class="tt">value</code> zajmuje 12 najmłodszych bitów.</p>
+<p>Na przykład dla:</p><p class="disp"><code class="tt">value = 2048 = 0x800</code></p>
+<p>otrzymamy:</p><p class="disp"><code class="tt">0x3000 | 0x0800 = 0x3800</code>.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 2.2 — Pierwsze napięcie z DAC</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Uruchom:</p><pre class="code"><code><span class="ln">cs_dac = <span class="b">Pin</span>(17, <span class="b">Pin</span>.OUT, value=1)</span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> dac_write(value):</span>
+<span class="ln">    value = <span class="b">max</span>(0, <span class="b">min</span>(4095, value))</span>
+<span class="ln"></span>
+<span class="ln">    word = 0x3000 | value</span>
+<span class="ln"></span>
+<span class="ln">    data = <span class="b">bytes</span>([</span>
+<span class="ln">        (word &gt;&gt; 8) &amp; 0xFF,</span>
+<span class="ln">        word &amp; 0xFF</span>
+<span class="ln">    ])</span>
+<span class="ln"></span>
+<span class="ln">    cs_dac.value(0)</span>
+<span class="ln">    spi.write(data)</span>
+<span class="ln">    cs_dac.value(1)</span>
+<span class="ln"></span>
+<span class="ln">dac_write(2048)</span></code></pre>
+<p>Zmierz napięcie VOUT za pomocą Analog Discovery II.</p>
+<p>Następnie sprawdź wartości:</p><p class="disp">0,&ensp; 1024,&ensp; 2048,&ensp; 3072,&ensp; 4095.</p>
+<p>Dla każdej wartości oblicz napięcie idealne i porównaj je z pomiarem.</p></div></section><section class="box info hasic"><div class="bt">Jak z 16-bitowego słowa powstają dwa bajty?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>MCP4921 wymaga przesłania jednego słowa o długości 16 bitów. Interfejs SPI skonfigurowaliśmy jednak do przesyłania elementów 8-bitowych, dlatego słowo trzeba rozdzielić na <b>starszy</b> i <b>młodszy bajt</b>.</p>
+<p>Dla przykładowej wartości:</p><p class="disp"><code class="tt">word = 0x3800</code></p>
+<p>wykonujemy:</p><pre class="code"><code><span class="ln">high_byte = (word &gt;&gt; 8) &amp; 0xFF</span>
+<span class="ln">low_byte  = word &amp; 0xFF</span>
+<span class="ln"></span>
+<span class="ln">data = <span class="b">bytes</span>([high_byte, low_byte])</span></code></pre>
+<p>Krok po kroku:</p>
+<ul class="tight">
+<li><code class="tt">word &gt;&gt; 8</code> przesuwa słowo o 8 bitów w prawo, dzięki czemu starszy bajt trafia na osiem najmłodszych pozycji,</li>
+<li><code class="tt">&amp; 0xFF</code> pozostawia tylko osiem najmłodszych bitów,</li>
+<li><code class="tt">word &amp; 0xFF</code> bez przesuwania wybiera młodszy bajt,</li>
+<li><code class="tt">bytes([high_byte, low_byte])</code> tworzy obiekt zawierający dwa kolejne bajty do wysłania przez SPI.</li></ul>
+<p>Dla <code class="tt">word = 0x3800</code> otrzymamy:</p>
+<p class="disp"><code class="tt">high_byte = 0x38</code>,&emsp;&emsp;<code class="tt">low_byte = 0x00</code>,</p>
+<p>czyli przez SPI zostaną przesłane kolejno bajty <code class="tt">0x38</code> i <code class="tt">0x00</code>.</p>
+<p>W funkcji <code class="tt">dac_write()</code> ten sam zapis został wykonany krócej:</p><pre class="code"><code><span class="ln">data = <span class="b">bytes</span>([</span>
+<span class="ln">    (word &gt;&gt; 8) &amp; 0xFF,</span>
+<span class="ln">    word &amp; 0xFF</span>
+<span class="ln">])</span></code></pre></div></section><h2 id="s5"><span class="num">5</span>Zadanie 3: Obserwacja transmisji SPI</h2><section class="box meas"><div class="bt">Pomiar 3.1 — Dekoder SPI w Analog Discovery II</div><div class="bb"><p>Podłącz wejścia cyfrowe Analog Discovery II do:</p>
+<ul class="tight"><li>SCK — <code class="tt">GP18</code>,</li><li>MOSI — <code class="tt">GP19</code>,</li><li>CS DAC — <code class="tt">GP17</code>,</li><li>GND — GND płytki.</li></ul>
+<p>W WaveForms uruchom <b>Logic</b> i dodaj dekoder SPI. Ustaw:</p>
+<ul class="tight"><li>Mode 0,</li><li>MSB first,</li><li>8 bitów na słowo.</li></ul>
+<p>Uruchom ponownie:</p><p class="disp"><code class="tt">dac_write(2048)</code></p>
+<p>Sprawdź, czy analizator pokazuje kolejno bajty:</p><p class="disp"><code class="tt">0x38</code>,&emsp;&emsp;<code class="tt">0x00</code>.</p>
+<p>Zaobserwuj również:</p>
+<ul class="tight"><li>kiedy linia CS przechodzi w stan niski,</li><li>ile impulsów SCK występuje podczas transmisji,</li><li>na którym zboczu SCK zmieniają się dane MOSI,</li><li>na którym zboczu są próbkowane.</li></ul></div></section><section class="box task hasic"><div class="bt">Zadanie 3.1 — Generowanie przebiegu schodkowego</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Napisz program, który kolejno ustawia na DAC wartości:</p>
+<p class="disp">0,&ensp; 512,&ensp; 1024,&ensp; …,&ensp; 4095</p>
+<p>i po każdej zmianie czeka około 100&nbsp;ms.</p>
+<p>Obserwuj jednocześnie:</p>
+<ul class="tight"><li>napięcie VOUT w narzędziu Scope,</li><li>transmisję SPI w narzędziu Logic.</li></ul>
+<p>Następnie zmniejsz opóźnienie i krok wartości tak, aby na wyjściu powstał przebieg zbliżony do piły.</p></div></section><h2 id="s6"><span class="num">6</span>Zadanie 4: Zewnętrzny przetwornik ADC MCP3202</h2>
+<p>MCP3202 jest 12-bitowym, dwukanałowym przetwornikiem analogowo-cyfrowym komunikującym się przez SPI. W przeciwieństwie do MCP4921 transmisja jest tutaj dwukierunkowa:</p>
+<ul><li>przez MOSI wysyłamy konfigurację pomiaru,</li><li>przez MISO odbieramy wynik konwersji.</li></ul>
+<h3 id="s6-1"><span class="num">6.1</span>Połączenie MCP3202</h3>
+<p>Wykonaj połączenia:</p>
+<table class="bt2"><thead><tr><th>MCP3202</th><th>Połączenie</th></tr></thead><tbody>
+<tr><td>VDD</td><td>3,3&nbsp;V</td></tr><tr><td>VSS</td><td>GND</td></tr><tr><td>CLK</td><td><code class="tt">GP18</code></td></tr>
+<tr><td>DIN</td><td><code class="tt">GP19</code></td></tr><tr><td>DOUT</td><td><code class="tt">GP16</code></td></tr><tr><td>CS</td><td><code class="tt">GP20</code></td></tr>
+<tr><td>CH0</td><td>POT1</td></tr><tr><td>CH1</td><td>GND</td></tr></tbody></table>
+<p>Pozostaw MCP4921 podłączony do tej samej magistrali. Jego linia CS powinna znajdować się w stanie wysokim, gdy komunikujesz się z MCP3202.</p><section class="box task hasic"><div class="bt">Zadanie 4.1 — Odczyt formatu transmisji z dokumentacji</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>W dokumentacji MCP3202 odszukaj rysunek przedstawiający komunikację z użyciem 8-bitowych transmisji SPI.</p>
+<p>Zidentyfikuj bity:</p>
+<ul class="tight"><li>Start,</li><li>SGL/DIFF,</li><li>ODD/SIGN,</li><li>MSBF,</li><li>Null bit,</li><li>B11–B0.</li></ul>
+<p>W tym ćwiczeniu użyjemy:</p>
+<ul class="tight"><li>trybu <i>single-ended</i>,</li><li>kanału CH0,</li><li>wyniku odczytywanego od najbardziej znaczącego bitu.</li></ul></div></section><section class="box task hasic"><div class="bt">Zadanie 4.2 — Odczyt kanału CH0</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Przed uruchomieniem programu <b>połącz wyjście POT1 z wejściem CH0 przetwornika MCP3202</b>. Potencjometr na płytce generuje napięcie z zakresu około 0–3,3&nbsp;V.</p>
+<p>Uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> utime <span class="k">import</span> sleep_ms</span>
+<span class="ln"></span>
+<span class="ln">cs_adc = <span class="b">Pin</span>(20, <span class="b">Pin</span>.OUT, value=1)</span>
+<span class="ln"></span>
+<span class="ln"><span class="k">def</span> adc_read(channel=0):</span>
+<span class="ln">    channel = 1 <span class="k">if</span> channel <span class="k">else</span> 0</span>
+<span class="ln"></span>
+<span class="ln">    tx = <span class="b">bytes</span>([</span>
+<span class="ln">        0x01,</span>
+<span class="ln">        0xA0 | (channel &lt;&lt; 6),</span>
+<span class="ln">        0x00</span>
+<span class="ln">    ])</span>
+<span class="ln"></span>
+<span class="ln">    rx = <span class="b">bytearray</span>(3)</span>
+<span class="ln"></span>
+<span class="ln">    cs_adc.value(0)</span>
+<span class="ln">    spi.write_readinto(tx, rx)</span>
+<span class="ln">    cs_adc.value(1)</span>
+<span class="ln"></span>
+<span class="ln">    value = ((rx[1] &amp; 0x0F) &lt;&lt; 8) | rx[2]</span>
+<span class="ln"></span>
+<span class="ln">    <span class="k">return</span> value</span>
+<span class="ln"></span>
+<span class="ln"><span class="k">while</span> <span class="k">True</span>:</span>
+<span class="ln">    raw = adc_read(0)</span>
+<span class="ln">    voltage = raw * 3.3 / 4095</span>
+<span class="ln"></span>
+<span class="ln">    <span class="b">print</span>(raw, voltage)</span>
+<span class="ln"></span>
+<span class="ln">    sleep_ms(200)</span></code></pre>
+<p>Obracaj potencjometrem POT1 i sprawdź zakres otrzymywanych wartości.</p></div></section><section class="box info hasic"><div class="bt">Jak powstaje bufor <code class="tt">tx</code> dla MCP3202?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>MCP3202 nie otrzymuje zwykłej wartości liczbowej, lecz sekwencję bitów konfiguracyjnych. Przy sprzętowym SPI najwygodniej przesłać je jako trzy pełne bajty:</p><pre class="code"><code><span class="ln">tx = <span class="b">bytes</span>([</span>
+<span class="ln">    0x01,</span>
+<span class="ln">    0xA0 | (channel &lt;&lt; 6),</span>
+<span class="ln">    0x00</span>
+<span class="ln">])</span></code></pre>
+<p>Znaczenie poszczególnych bajtów jest następujące:</p>
+<ul class="tight">
+<li><code class="tt">0x01</code> — siedem zer poprzedzających transmisję oraz bit START ustawiony na 1,</li>
+<li>drugi bajt zawiera bity konfiguracyjne:
+  <ul class="tight dash">
+  <li>bit 7: <code class="tt">SGL/DIFF = 1</code> — pomiar <i>single-ended</i>,</li>
+  <li>bit 6: <code class="tt">ODD/SIGN</code> — wybór kanału CH0 lub CH1,</li>
+  <li>bit 5: <code class="tt">MSBF = 1</code> — wynik zwracany od najbardziej znaczącego bitu,</li>
+  <li>pozostałe bity są nieistotne (<i>don’t care</i>),</li></ul></li>
+<li><code class="tt">0x00</code> — bajt nie niesie już konfiguracji, ale jego wysłanie generuje osiem kolejnych impulsów SCK potrzebnych do odebrania młodszych bitów wyniku.</li></ul>
+<p>Dla kanału CH0:</p><p class="disp"><code class="tt">0xA0 | (0 &lt;&lt; 6) = 0xA0</code>,</p>
+<p>natomiast dla kanału CH1:</p><p class="disp"><code class="tt">0xA0 | (1 &lt;&lt; 6) = 0xE0</code>.</p>
+<p>Operator <code class="tt">&lt;&lt; 6</code> przesuwa numer kanału na pozycję bitu <code class="tt">ODD/SIGN</code>, a operator <code class="tt">|</code> ustawia go razem z pozostałymi wymaganymi bitami konfiguracyjnymi.</p></div></section><section class="box tip hasic"><div class="bt">Alternatywnie: napięcie z Analog Discovery II</div><div class="ic"><svg viewBox="0 0 352 512" aria-hidden="true"><path fill="currentColor" d="M96.1 454.4c0 6.3 1.9 12.4 5.4 17.7l17.1 25.7a32 32 0 0 0 26.6 14.3h61.7a32 32 0 0 0 26.6-14.3l17.1-25.7a32 32 0 0 0 5.4-17.7l.04-38.4H96l.1 38.4zM0 176c0 44.4 16.5 84.9 43.6 115.8 16.5 18.8 42.4 58.2 52.2 91.5v.3h160v-.3c9.9-33.3 35.7-72.7 52.2-91.5A175.3 175.3 0 0 0 352 176C352 78.6 272.9-.3 175.5 0 73.4.3 0 83 0 176zm176-80c-44.1 0-80 35.9-80 80 0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.8 50.2-112 112-112 8.8 0 16 7.2 16 16s-7.2 16-16 16z"/></svg></div><div class="bb"><p>Zamiast potencjometru możesz wykorzystać generator Wavegen w Analog Discovery II jako regulowane źródło napięcia stałego. Ustaw przebieg typu <b>DC</b> i zmieniaj poziom w zakresie 0–3,3&nbsp;V.</p>
+<p>Wyjście generatora podłącz do CH0 MCP3202, a masę Analog Discovery II połącz z GND płytki.</p>
+<p><b>Nie ustawiaj napięcia ujemnego ani większego od 3,3&nbsp;V.</b></p></div></section><section class="box info hasic"><div class="bt">Dlaczego używamy <code class="tt">write_readinto()</code>?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>SPI przesyła dane jednocześnie w obu kierunkach. Funkcja:</p>
+<p class="disp"><code class="tt">spi.write_readinto(tx, rx)</code></p>
+<p>podczas tych samych impulsów zegara:</p>
+<ul class="tight"><li>wysyła bajty z bufora <code class="tt">tx</code> przez MOSI,</li><li>zapisuje bajty odebrane przez MISO do bufora <code class="tt">rx</code>.</li></ul>
+<p>MCP3202 potrzebuje zegara również wtedy, gdy już wysłał konfigurację i tylko zwraca wynik pomiaru. Dlatego trzeci bajt <code class="tt">0x00</code> jest przede wszystkim źródłem kolejnych impulsów SCK.</p></div></section><section class="box info hasic"><div class="bt">Składanie wyniku 12-bitowego</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Po transmisji:</p><p class="disp"><code class="tt">rx[1] &amp; 0x0F</code></p>
+<p>pozostawia cztery najmłodsze bity drugiego odebranego bajtu. Są to bity B11–B8 wyniku.</p>
+<p>Przesunięcie:</p><p class="disp"><code class="tt">(rx[1] &amp; 0x0F) &lt;&lt; 8</code></p>
+<p>ustawia je na odpowiednich pozycjach, a operator OR dołącza osiem młodszych bitów z <code class="tt">rx[2]</code>.</p></div></section><h2 id="s7"><span class="num">7</span>Zadanie 5: Wyświetlacz graficzny ST7789V</h2>
+<p>Na płytce dydaktycznej znajduje się kolorowy wyświetlacz TFT HC28010-D o rozdzielczości 240×320 pikseli. Zastosowany kontroler ST7789V komunikuje się z mikrokontrolerem przez SPI.</p>
+<p>W przeciwieństwie do prostych przetworników ADC/DAC wyświetlacz wymaga wielu poleceń inicjalizacyjnych oraz przesyłania dużej ilości danych. W tym zadaniu wykorzystamy dlatego gotowy plik <code class="tt">st7789.py</code>, ale nadal świadomie konfigurujemy magistralę SPI i wszystkie linie sterujące.</p>
+<h3 id="s7-1"><span class="num">7.1</span>Połączenie wyświetlacza</h3>
+<p>Pozostaw MCP4921 i MCP3202 podłączone do magistrali. Dołącz wyświetlacz:</p>
+<table class="bt2"><thead><tr><th>Wyświetlacz</th><th>Raspberry Pi Pico 2 W</th></tr></thead><tbody>
+<tr><td>SCL/SCK</td><td><code class="tt">GP18</code></td></tr><tr><td>SDA/MOSI</td><td><code class="tt">GP19</code></td></tr><tr><td>SDO/MISO</td><td><code class="tt">GP16</code></td></tr>
+<tr><td>CSX</td><td><code class="tt">GP21</code></td></tr><tr><td>D/C</td><td><code class="tt">GP22</code></td></tr><tr><td>RST</td><td><code class="tt">GP28</code></td></tr><tr><td>BL</td><td><code class="tt">GP27</code></td></tr></tbody></table><section class="box info hasic"><div class="bt">Dodatkowe linie D/C, RST i BL</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Oprócz typowych linii SPI wyświetlacz wykorzystuje:</p>
+<ul class="tight"><li><b>D/C</b> — informuje kontroler, czy przesyłany bajt jest poleceniem, czy danymi,</li>
+<li><b>RST</b> — sprzętowy reset kontrolera,</li>
+<li><b>BL</b> — sterowanie podświetleniem przez tranzystor znajdujący się na płytce dydaktycznej.</li></ul>
+<p>Linia D/C nie zastępuje CS. CS wybiera urządzenie na magistrali, natomiast D/C określa znaczenie przesyłanych bajtów.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 5.1 — Pierwsza grafika</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Skopiuj do pamięci Raspberry Pi Pico dostarczony plik <code class="tt">st7789.py</code>.</p>
+<p>Następnie uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span>, <span class="b">SPI</span></span>
+<span class="ln"><span class="k">from</span> st7789 <span class="k">import</span> (</span>
+<span class="ln">    ST7789, BLACK, WHITE,</span>
+<span class="ln">    RED, GREEN, BLUE, YELLOW</span>
+<span class="ln">)</span>
+<span class="ln"></span>
+<span class="ln">spi = <span class="b">SPI</span>(</span>
+<span class="ln">    0,</span>
+<span class="ln">    baudrate=800_000,</span>
+<span class="ln">    polarity=0,</span>
+<span class="ln">    phase=0,</span>
+<span class="ln">    bits=8,</span>
+<span class="ln">    firstbit=<span class="b">SPI</span>.MSB,</span>
+<span class="ln">    sck=<span class="b">Pin</span>(18),</span>
+<span class="ln">    mosi=<span class="b">Pin</span>(19),</span>
+<span class="ln">    miso=<span class="b">Pin</span>(16)</span>
+<span class="ln">)</span>
+<span class="ln"></span>
+<span class="ln">display = ST7789(</span>
+<span class="ln">    spi,</span>
+<span class="ln">    cs=21,</span>
+<span class="ln">    dc=22,</span>
+<span class="ln">    rst=28,</span>
+<span class="ln">    bl=27,</span>
+<span class="ln">    width=240,</span>
+<span class="ln">    height=320</span>
+<span class="ln">)</span>
+<span class="ln"></span>
+<span class="ln">display.fill(BLACK)</span>
+<span class="ln"></span>
+<span class="ln">display.text(<span class="s">"PSM - SPI"</span>, 10, 10, WHITE)</span>
+<span class="ln"></span>
+<span class="ln">display.fill_rect(20, 50, 60, 40, RED)</span>
+<span class="ln">display.fill_rect(90, 50, 60, 40, GREEN)</span>
+<span class="ln">display.fill_rect(160, 50, 60, 40, BLUE)</span>
+<span class="ln"></span>
+<span class="ln">display.rect(20, 120, 200, 50, YELLOW)</span>
+<span class="ln">display.line(20, 200, 220, 280, WHITE)</span>
+<span class="ln"></span>
+<span class="ln">display.show()</span></code></pre>
+<p>Sprawdź działanie programu, a następnie:</p>
+<ol class="tight"><li>zmień napisy i kolory,</li><li>narysuj co najmniej dwa własne prostokąty,</li>
+<li>za pomocą <code class="tt">polygon()</code> narysuj własny kształt zdefiniowany przez co najmniej pięć punktów (<i>x</i>,&nbsp;<i>y</i>), a następnie narysuj drugi kształt za pomocą <code class="tt">fill_polygon()</code>,</li>
+<li>dodaj poziomy pasek o długości zależnej od wybranej liczby 0–100.</li></ol></div></section><section class="box info hasic"><div class="bt">Własne kształty na podstawie współrzędnych</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Biblioteka udostępnia funkcje <code class="tt">pixel()</code>, <code class="tt">line()</code>, <code class="tt">rect()</code> i <code class="tt">fill_rect()</code>. Dodatkowo:</p>
+<ul class="tight"><li><code class="tt">polygon(points, color)</code> rysuje obrys wielokąta,</li><li><code class="tt">fill_polygon(points, color)</code> rysuje wielokąt wypełniony kolorem.</li></ul>
+<p>W obu przypadkach kształt definiuje się przez listę współrzędnych (<i>x</i>,&nbsp;<i>y</i>) kolejnych wierzchołków.</p>
+<p>Przykład:</p><pre class="code"><code><span class="ln">points = [</span>
+<span class="ln">    (120, 180),</span>
+<span class="ln">    (160, 240),</span>
+<span class="ln">    (140, 240),</span>
+<span class="ln">    (140, 280),</span>
+<span class="ln">    (100, 280),</span>
+<span class="ln">    (100, 240),</span>
+<span class="ln">    (80, 240)</span>
+<span class="ln">]</span>
+<span class="ln"></span>
+<span class="ln">display.polygon(points, YELLOW)</span>
+<span class="ln"></span>
+<span class="ln">points2 = [</span>
+<span class="ln">    (120, 80),</span>
+<span class="ln">    (160, 140),</span>
+<span class="ln">    (140, 140),</span>
+<span class="ln">    (140, 170),</span>
+<span class="ln">    (100, 170),</span>
+<span class="ln">    (100, 140),</span>
+<span class="ln">    (80, 140)</span>
+<span class="ln">]</span>
+<span class="ln"></span>
+<span class="ln">display.fill_polygon(points2, GREEN)</span>
+<span class="ln"></span>
+<span class="ln">display.show()</span></code></pre>
+<p>Funkcja <code class="tt">polygon()</code> łączy kolejne punkty odcinkami i na końcu łączy ostatni punkt z pierwszym. Funkcja <code class="tt">fill_polygon()</code> dodatkowo wypełnia wnętrze kształtu.</p>
+<p>Można w ten sposób rysować zarówno wielokąty wypukłe, jak i wklęsłe, np. trójkąty, strzałki lub własne symbole. Należy jednak unikać wielokątów, których krawędzie przecinają się ze sobą.</p></div></section><section class="box info hasic"><div class="bt">Dlaczego tworzymy bufor obrazu?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Biblioteka <code class="tt">st7789.py</code> wykorzystuje moduł <code class="tt">framebuf</code>. Najpierw operacje takie jak <code class="tt">text()</code>, <code class="tt">rect()</code> czy <code class="tt">fill_rect()</code> zmieniają zawartość bufora w pamięci RAM mikrokontrolera. Dopiero:</p>
+<p class="disp"><code class="tt">display.show()</code></p>
+<p>wysyła cały bufor do wyświetlacza.</p>
+<p>Dla obrazu 240×320 w formacie RGB565 jeden piksel zajmuje 2 bajty, więc pełna klatka wymaga:</p>
+<div class="eq"><math display="block"><mn>240</mn><mo>&#x22C5;</mo><mn>320</mn><mo>&#x22C5;</mo><mn>2</mn><mo>=</mo><mn>153600</mn><mtext>&#8239;B</mtext><mo>.</mo></math><span class="eqn">(2)</span></div>
+<p>To około 150&nbsp;kB danych przesyłanych przy jednym pełnym odświeżeniu.</p></div></section><section class="box info hasic"><div class="bt">Jedna magistrala, różne wymagania częstotliwości</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>MCP3202 pracuje ze znacznie niższą maksymalną częstotliwością zegara niż wyświetlacz ST7789V. Dlatego urządzenia współdzielą linie SPI, ale przed komunikacją można zmieniać parametry magistrali.</p>
+<p>Biblioteka wyświetlacza przed przesłaniem obrazu ustawia szybsze SPI. Funkcja odczytująca MCP3202 powinna natomiast przed swoją transakcją przywrócić bezpieczniejszą częstotliwość, np. 800&nbsp;kHz.</p></div></section><p>Zmodyfikuj funkcję <code class="tt">adc_read()</code> z zadania 4.2, dodając na początku:</p><pre class="code"><code><span class="ln">spi.init(</span>
+<span class="ln">    baudrate=800_000,</span>
+<span class="ln">    polarity=0,</span>
+<span class="ln">    phase=0,</span>
+<span class="ln">    bits=8,</span>
+<span class="ln">    firstbit=<span class="b">SPI</span>.MSB</span>
+<span class="ln">)</span></code></pre>
+<p>Dzięki temu odczyt MCP3202 pozostaje poprawny również po wcześniejszym szybkim odświeżeniu TFT.</p>
+
+<h2 id="s8"><span class="num">8</span>Zadanie 6: Trzy urządzenia na jednej magistrali SPI</h2>
+<p>W tej chwili wspólne linie SPI wykorzystują trzy urządzenia:</p>
+<ul><li>MCP4921 — CS na <code class="tt">GP17</code>,</li><li>MCP3202 — CS na <code class="tt">GP20</code>,</li><li>ST7789V — CS na <code class="tt">GP21</code>.</li></ul><section class="box info hasic"><div class="bt">SPI a I<sup>2</sup>C — wybór urządzenia</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>W I<sup>2</sup>C urządzenie wybieraliśmy poprzez adres wysyłany na SDA.</p>
+<p>W SPI nie wysyłamy adresu urządzenia. Zamiast tego mikrokontroler aktywuje odpowiednią linię CS:</p>
+<ul class="tight"><li><code class="tt">GP17=0</code> — komunikacja z MCP4921,</li><li><code class="tt">GP20=0</code> — komunikacja z MCP3202,</li><li><code class="tt">GP21=0</code> — komunikacja z wyświetlaczem.</li></ul>
+<p>Pozostałe linie CS powinny w tym czasie pozostawać w stanie wysokim.</p></div></section><section class="box final"><div class="bt">Zadanie 6.1 — Pętla DAC–ADC z prezentacją na TFT</div><div class="bb"><p>Odłącz POT1 od CH0 MCP3202 i połącz:</p>
+<p class="disp"><b>VOUT MCP4921 → CH0 MCP3202</b>.</p>
+<p>Napisz program, który dla wartości:</p>
+<p class="disp">0, 512, 1024, 1536, 2048, 2560, 3072, 3584, 4095</p>
+<p>wykonuje kolejno:</p>
+<ol class="tight"><li>zapis wartości do MCP4921,</li><li>krótkie odczekanie na ustalenie napięcia,</li><li>odczyt MCP3202,</li><li>obliczenie idealnego napięcia DAC,</li><li>obliczenie napięcia wynikającego z ADC,</li><li>obliczenie różnicy w mV,</li><li>wyświetlenie wyników na ekranie TFT.</li></ol>
+<p>Na wyświetlaczu powinny znaleźć się co najmniej:</p>
+<ul class="tight"><li>kod zadany DAC,</li><li>kod odczytany ADC,</li><li>napięcie idealne,</li><li>napięcie zmierzone,</li><li>błąd w mV,</li><li>poziomy pasek pokazujący aktualny poziom napięcia.</li></ul>
+<p>Przykładowy wygląd:</p><pre class="code plain"><code>DAC: 2048
+ADC: 2036
+Uset: 1.650 V
+Uadc: 1.640 V
+Error: -10 mV
+
+[############------]</code></pre>
+<p>Wyznacz:</p>
+<ul class="tight"><li>największą wartość bezwzględną błędu,</li><li>średni błąd dla wszystkich punktów.</li></ul>
+<p>Na zakończenie odpowiedz na pytanie: dlaczego nawet dwa 12-bitowe przetworniki połączone bezpośrednio ze sobą nie muszą zwracać dokładnie tego samego kodu cyfrowego?</p></div></section><h2 id="s9"><span class="num">9</span>Podsumowanie</h2><section class="box tip hasic"><div class="bt">Po tych zajęciach powinieneś umieć</div><div class="ic"><svg viewBox="0 0 352 512" aria-hidden="true"><path fill="currentColor" d="M96.1 454.4c0 6.3 1.9 12.4 5.4 17.7l17.1 25.7a32 32 0 0 0 26.6 14.3h61.7a32 32 0 0 0 26.6-14.3l17.1-25.7a32 32 0 0 0 5.4-17.7l.04-38.4H96l.1 38.4zM0 176c0 44.4 16.5 84.9 43.6 115.8 16.5 18.8 42.4 58.2 52.2 91.5v.3h160v-.3c9.9-33.3 35.7-72.7 52.2-91.5A175.3 175.3 0 0 0 352 176C352 78.6 272.9-.3 175.5 0 73.4.3 0 83 0 176zm176-80c-44.1 0-80 35.9-80 80 0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.8 50.2-112 112-112 8.8 0 16 7.2 16 16s-7.2 16-16 16z"/></svg></div><div class="bb"><ul class="tight">
+<li>wskazać linie SCK, MOSI, MISO i CS interfejsu SPI,</li>
+<li>wyjaśnić znaczenie CPOL i CPHA,</li>
+<li>skonfigurować sprzętowy interfejs SPI w MicroPythonie,</li>
+<li>sterować linią CS jako zwykłym GPIO,</li>
+<li>wysyłać dane do urządzenia za pomocą <code class="tt">spi.write()</code>,</li>
+<li>jednocześnie wysyłać i odbierać dane za pomocą <code class="tt">write_readinto()</code>,</li>
+<li>konstruować 16-bitowe słowo polecenia dla MCP4921,</li>
+<li>odtworzyć 12-bitowy wynik pomiaru MCP3202 z dwóch bajtów,</li>
+<li>wykorzystać graficzny wyświetlacz SPI i wyjaśnić rolę linii D/C,</li>
+<li>wykorzystać kilka urządzeń na wspólnej magistrali SPI,</li>
+<li>wyjaśnić różnicę pomiędzy wyborem urządzenia w I<sup>2</sup>C i SPI.</li></ul></div></section><section class="box warn hasic"><div class="bt">Uwaga</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M569.5 440C588 472 564.8 512 527.9 512H48.1c-36.9 0-60-40.1-41.6-72L246.4 24c18.5-32 64.7-32 83.2 0l239.9 416zM288 354a46 46 0 1 0 0 92 46 46 0 0 0 0-92zm-43.7-165.3 7.4 136c.3 6.4 5.6 11.3 12 11.3h48.5c6.4 0 11.6-5 12-11.3l7.4-136c.4-6.9-5.1-12.7-12-12.7h-63.4c-6.9 0-12.4 5.8-12 12.7z"/></svg></div><div class="bb"><p>Przed opuszczeniem stanowiska zatrzymaj program i usuń z pamięci Raspberry Pi Pico pliki utworzone podczas tego laboratorium. Interpreter MicroPython powinien pozostać zainstalowany. Rozłącz dodatkowe połączenia pomiędzy DAC i ADC, pozostaw wyświetlacz w stanie zgodnym z organizacją stanowiska i uporządkuj przewody.</p></div></section>
+</body>
+</html>
