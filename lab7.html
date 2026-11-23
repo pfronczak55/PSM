@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSM — Laboratorium 7: 1-Wire i microSD — rejestrator danych</title>
+<style>
+:root{--txt:#111;--code-bg:#f8f8f8;--code-bd:#bfbfbf}
+*{box-sizing:border-box}
+html{background:#e9e9e9}
+body{margin:0 auto;max-width:860px;background:#fff;color:var(--txt);padding:48px 64px 80px;
+ font-family:"Latin Modern Roman","CMU Serif","Computer Modern Serif","TeX Gyre Termes",Georgia,"Times New Roman",serif;
+ font-size:17px;line-height:1.5;box-shadow:0 0 12px rgba(0,0,0,.12)}
+@media (max-width:700px){body{padding:24px 16px 48px;font-size:16px}}
+a{color:#1a0dab}
+p{margin:.45em 0}
+h2{font-size:1.45em;margin:1.8em 0 .6em;font-weight:bold}
+h3{font-size:1.18em;margin:1.4em 0 .5em;font-weight:bold}
+h2 .num,h3 .num{display:inline-block;min-width:2.1em}
+h3 .num{min-width:2.6em}
+.title{text-align:center;padding:70px 0 40px}
+.title h1{font-size:1.75em;font-weight:normal;margin:0 0 .6em;line-height:1.3}
+.title hr{width:60%;border:0;border-top:1px solid #7b2fa8;margin:0 auto 1em}
+.title .sub{font-size:1.1em}.title .auth{font-size:.92em;margin-top:1.5em}
+.toc h2{margin-top:1em}
+.toc ol{list-style:none;padding:0;margin:0}
+.toc>ol>li{margin:.55em 0;font-weight:bold}
+.toc ol ol{margin:.15em 0 0 1.6em;font-weight:normal;font-size:.95em}
+.toc a{color:inherit;text-decoration:none}.toc a:hover{text-decoration:underline}
+.toc span{display:inline-block;min-width:2.1em}
+ul,ol{margin:.4em 0;padding-left:1.8em}
+li{margin:.25em 0}
+ul.tight li,ol.tight li{margin:.05em 0}
+code.tt{font-family:"Latin Modern Mono","CMU Typewriter Text","DejaVu Sans Mono",Consolas,monospace;font-size:.92em}
+.disp{text-align:center;margin:.5em 0}
+table.bt2{border-collapse:collapse;margin:.7em auto}
+table.bt2 th{font-weight:bold;border-bottom:1px solid #000;padding:2px 10px;text-align:left}
+table.bt2 td{padding:1px 10px}
+table.bt2 th+th,table.bt2 td+td{border-left:1px solid #000}
+table.fill td{min-width:9em}table.fill td+td{min-width:10em}
+table.fill tbody tr td{border-bottom:1px dotted #bbb;height:1.6em}
+figure{margin:1.2em 0;text-align:center}
+figure img{max-width:100%;height:auto}
+figcaption{text-align:left;margin-top:.5em}
+.eq{display:flex;align-items:center;margin:.6em 0}
+.eq math{flex:1;font-size:1.05em}
+.eqn{min-width:2.5em;text-align:right}
+/* boxes */
+.box{--c:#007f8d;--bg:#f2f9f9;position:relative;border:1.3px solid var(--c);background:var(--bg);border-radius:7px;
+ margin:2.1em 0 1.2em;padding:1em 1em .7em}
+.box.hasic{padding-left:3.4em}
+.box>.bt{position:absolute;top:0;left:2.4em;transform:translateY(-55%);background:var(--c);color:#fff;
+ padding:.1em .7em;border-radius:3px;font-size:1em;line-height:1.35}
+.box>.bt code.tt{color:#fff}
+.box>.ic{position:absolute;left:.7em;top:1em;width:1.9em;height:1.9em;color:var(--c)}
+.box>.ic svg{width:100%;height:100%;display:block}
+.box.task{--c:#991006;--bg:#faf3f3}
+.box.info{--c:#007f8d;--bg:#f2f9f9}
+.box.warn{--c:#e53312;--bg:#fef5f3}
+.box.tip{--c:#004a6c;--bg:#f2f6f8}
+.box.meas{--c:#008000;--bg:#fff;border-radius:3px;padding-top:2.3em;border-width:1.6px}
+.box.final{--c:#6a1b9a;--bg:#fff;border-radius:3px;padding-top:2.3em;border-width:1.6px}
+.box.meas>.bt,.box.final>.bt{left:0;right:0;transform:none;border-radius:0;padding:.25em 1em;font-weight:bold}
+.box .box{margin-left:.2em;margin-right:.2em}
+/* code */
+pre.code{background:var(--code-bg);border:1px solid var(--code-bd);margin:.6em 0;padding:.45em .6em .45em 0;
+ overflow-x:auto;font-family:"DejaVu Sans Mono","Latin Modern Mono",Consolas,Menlo,monospace;font-size:.82em;line-height:1.55;
+ counter-reset:ln;tab-size:4}
+pre.code code{display:block;white-space:pre}
+pre.code .ln{counter-increment:ln}
+pre.code .ln::before{content:counter(ln);display:inline-block;width:2.6em;padding-right:.9em;margin-right:.3em;text-align:right;
+ color:#999;font-size:.8em;user-select:none;-webkit-user-select:none}
+pre.code .k{color:#2a3fbf}
+pre.code .b{color:#8a2be2}
+pre.code .s{color:#c25f00}
+pre.code .c{color:#2e7d32;font-style:italic}
+pre.code.plain{padding-left:.8em;counter-reset:none}
+h4.sub{font-size:1em;margin:1.2em 0 .3em}
+@media print{html{background:#fff}body{box-shadow:none;max-width:none;padding:0}.box,pre.code,figure{break-inside:avoid}}
+</style>
+</head>
+<body>
+
+<header class="title">
+<h1>Podstawy Systemów Mikroprocesorowych<br>Laboratorium</h1>
+<hr>
+<p class="sub">Laboratorium 7: 1-Wire i microSD — rejestrator danych</p>
+<p class="auth">Autorzy: Dariusz Tefelski, Angelika Tefelska</p>
+</header>
+
+<nav class="toc">
+<h2 class="nonum">Spis treści</h2>
+<ol>
+<li><a href="#s1"><span>1</span>Wprowadzenie</a></li>
+<li><a href="#s2"><span>2</span>Wyposażenie stanowiska</a></li>
+<li><a href="#s3"><span>3</span>Zadanie 1: Magistrala 1-Wire i identyfikacja czujnika</a></li>
+<li><a href="#s4"><span>4</span>Zadanie 2: Pomiar temperatury</a></li>
+<li><a href="#s5"><span>5</span>Zadanie 3: Co dzieje się na linii 1-Wire?</a></li>
+<li><a href="#s6"><span>6</span>Zadanie 4: Karta microSD i system plików</a></li>
+<li><a href="#s7"><span>7</span>Zadanie 5: Zapis i odczyt plików</a></li>
+<li><a href="#s8"><span>8</span>Zadanie 6: RTC + DS18B20 + microSD</a></li>
+<li><a href="#s9"><span>9</span>Zadanie końcowe: Rejestrator temperatury</a></li>
+<li><a href="#s10"><span>10</span>Podsumowanie</a></li>
+</ol>
+</nav>
+
+<h2 id="s1"><span class="num">1</span>Wprowadzenie</h2>
+<section class="box task hasic"><div class="bt">Cel ćwiczenia</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Celem ćwiczenia jest poznanie magistrali 1-Wire oraz budowa prostego rejestratora danych. W czasie laboratorium wykorzystasz cyfrowy czujnik temperatury DS18B20, zegar czasu rzeczywistego RTC oraz kartę microSD jako pamięć masową.</p></div></section><p>Na poprzednich laboratoriach poznaliśmy interfejsy UART, I<sup>2</sup>C i SPI. Magistrala 1-Wire ma inną cechę charakterystyczną: do komunikacji z urządzeniami wykorzystuje pojedynczą linię danych, oprócz masy i zasilania.</p>
+<p>Czujnik DS18B20 jest typowym urządzeniem 1-Wire. Każdy egzemplarz ma unikatowy 64-bitowy identyfikator ROM, dzięki czemu do jednej linii danych można podłączyć wiele czujników i wybierać je indywidualnie.</p>
+<p>Druga część laboratorium dotyczy zapisywania danych na karcie microSD. Karta będzie pracowała w trybie SPI, ale tym razem nie analizujemy szczegółowo protokołu karty. Interesuje nas przede wszystkim <b>pamięć masowa, system plików i bezpieczny zapis danych</b>.</p>
+
+<h2 id="s2"><span class="num">2</span>Wyposażenie stanowiska</h2>
+<p>Do wykonania ćwiczenia potrzebne są:</p>
+<ul>
+<li>płytka dydaktyczna z Raspberry Pi Pico 2 W,</li>
+<li>czujnik temperatury DS18B20 znajdujący się na płytce,</li>
+<li>zegar czasu rzeczywistego PCF8563,</li>
+<li>gniazdo microSD na płytce,</li>
+<li>karta microSD sformatowana w systemie FAT,</li>
+<li>przewody połączeniowe,</li>
+<li>Analog Discovery II z programem WaveForms.</li>
+</ul>
+<p>W laboratorium wykorzystamy następujące połączenia:</p>
+<table class="bt2"><thead><tr><th>Urządzenie / sygnał</th><th>Raspberry Pi Pico 2 W</th></tr></thead><tbody>
+<tr><td>DS18B20 DQ</td><td><code class="tt">GP14</code></td></tr>
+<tr><td>SD CLK</td><td><code class="tt">GP10</code></td></tr>
+<tr><td>SD CMD / MOSI</td><td><code class="tt">GP11</code></td></tr>
+<tr><td>SD DAT0 / MISO</td><td><code class="tt">GP12</code></td></tr>
+<tr><td>SD DAT3 / CS</td><td><code class="tt">GP13</code></td></tr>
+<tr><td>SD DETECT</td><td><code class="tt">GP15</code></td></tr>
+<tr><td>RTC SDA</td><td><code class="tt">GP16</code></td></tr>
+<tr><td>RTC SCL</td><td><code class="tt">GP17</code></td></tr></tbody></table>
+<section class="box info hasic"><div class="bt">Rezystor podciągający DS18B20</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Linia DQ magistrali 1-Wire wymaga rezystora podciągającego do zasilania. W typowych przykładach spotkasz wartość około 4,7&nbsp;kΩ.</p><p>Na płytce dydaktycznej rezystor podciągający jest już zamontowany i ma wartość <b>10&nbsp;kΩ</b>, dlatego nie dodawaj dodatkowego rezystora.</p></div></section><h2 id="s3"><span class="num">3</span>Zadanie 1: Magistrala 1-Wire i identyfikacja czujnika</h2>
+<p>1-Wire wykorzystuje jedną dwukierunkową linię danych. Urządzenia nie mają klasycznych adresów odpowiadających rodzajowi układu. Zamiast tego każde urządzenie posiada fabrycznie zapisany unikatowy kod ROM.</p>
+<p>Dla DS18B20 kod ROM ma długość 64 bitów:</p>
+<ul><li>8 bitów — kod rodziny urządzenia,</li><li>48 bitów — unikatowy numer seryjny,</li><li>8 bitów — CRC.</li></ul><section class="box task hasic"><div class="bt">Zadanie 1.1 — Skanowanie magistrali 1-Wire</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Połącz linię DQ czujnika DS18B20 z <code class="tt">GP14</code> i uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span></span>
+<span class="ln"><span class="k">import</span> onewire</span>
+<span class="ln"><span class="k">import</span> ds18x20</span>
+<span class="ln">ow = onewire.OneWire(<span class="b">Pin</span>(14))</span>
+<span class="ln">ds = ds18x20.DS18X20(ow)</span>
+<span class="ln">roms = ds.scan()</span>
+<span class="ln"><span class="b">print</span>(<span class="s">"Liczba urzadzen:"</span>, <span class="b">len</span>(roms))</span>
+<span class="ln"><span class="k">for</span> rom <span class="k">in</span> roms:</span>
+<span class="ln">    <span class="b">print</span>(rom)</span></code></pre>
+<p>Powinien zostać znaleziony co najmniej jeden czujnik.</p>
+<p>Sprawdź typ i długość kodu ROM:</p><pre class="code"><code><span class="ln"><span class="b">print</span>(<span class="b">type</span>(roms[0]))</span>
+<span class="ln"><span class="b">print</span>(<span class="b">len</span>(roms[0]))</span></code></pre>
+<p>Następnie wyświetl kod ROM w czytelnej postaci szesnastkowej:</p><pre class="code"><code><span class="ln"><span class="k">for</span> rom <span class="k">in</span> roms:</span>
+<span class="ln">    <span class="b">print</span>(rom.<span class="b">hex</span>())</span></code></pre></div></section><section class="box info hasic"><div class="bt">Dlaczego każdy czujnik ma własny kod ROM?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>W magistrali 1-Wire wiele urządzeń może być podłączonych do tej samej linii DQ. Unikatowy kod ROM umożliwia wybranie konkretnego urządzenia bez stosowania osobnych linii CS ani konfigurowanych adresów.</p><p>Dla rodziny DS18B20 pierwszy bajt kodu ROM ma wartość <code class="tt">0x28</code>.</p></div></section><section class="box info hasic"><div class="bt">Co to jest CRC?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>CRC (<i>Cyclic Redundancy Check</i> — cykliczna kontrola nadmiarowa) jest mechanizmem służącym do wykrywania błędów w danych. Nie szyfruje danych i nie poprawia błędu — pozwala jedynie sprawdzić, czy odebrana informacja najprawdopodobniej nie została zmieniona podczas transmisji lub zapisu.</p>
+<p>Nadajnik oblicza z przesyłanych danych krótką wartość kontrolną według określonego algorytmu i dołącza ją do danych. Odbiornik wykonuje to samo obliczenie i porównuje otrzymany wynik z przesłaną wartością CRC.</p>
+<p>W kodzie ROM DS18B20:</p>
+<ul class="tight"><li>pierwsze 7 bajtów zawiera kod rodziny i numer seryjny,</li><li>ósmy bajt zawiera CRC-8 obliczone dla poprzednich 7 bajtów.</li></ul>
+<p>Jeżeli CRC policzone przez mikrokontroler jest takie samo jak CRC zapisane w ROM, dane uznajemy za poprawnie odczytane. Różne wartości świadczą o błędzie odczytu lub transmisji.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 1.2 — Sprawdzenie CRC kodu ROM</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Moduł <code class="tt">onewire</code> umożliwia obliczenie CRC-8.</p>
+<p>Dla pierwszego znalezionego urządzenia sprawdź:</p><pre class="code"><code><span class="ln">rom = roms[0]</span>
+<span class="ln">calculated_crc = ow.crc8(rom[:7])</span>
+<span class="ln">stored_crc = rom[7]</span>
+<span class="ln"><span class="b">print</span>(<span class="s">"CRC policzone:"</span>, <span class="b">hex</span>(calculated_crc))</span>
+<span class="ln"><span class="b">print</span>(<span class="s">"CRC w ROM:    "</span>, <span class="b">hex</span>(stored_crc))</span>
+<span class="ln"><span class="b">print</span>(<span class="s">"Poprawne:"</span>, calculated_crc == stored_crc)</span></code></pre>
+<p>Porównaj obie wartości i wyjaśnij, co oznacza ich zgodność oraz co mogłaby oznaczać różnica między nimi.</p></div></section><h2 id="s4"><span class="num">4</span>Zadanie 2: Pomiar temperatury</h2>
+<p>DS18B20 nie zwraca nowego pomiaru natychmiast po wywołaniu funkcji odczytu. Najpierw należy uruchomić konwersję temperatury, poczekać na jej zakończenie, a dopiero potem odczytać wynik.</p>
+<p>Przy domyślnej rozdzielczości 12 bitów maksymalny czas konwersji wynosi około 750&nbsp;ms.</p><section class="box task hasic"><div class="bt">Zadanie 2.1 — Pierwszy pomiar temperatury</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> utime <span class="k">import</span> sleep_ms</span>
+<span class="ln"><span class="k">while</span> <span class="k">True</span>:</span>
+<span class="ln">    ds.convert_temp()</span>
+<span class="ln">    sleep_ms(750)</span>
+<span class="ln">    <span class="k">for</span> rom <span class="k">in</span> roms:</span>
+<span class="ln">        temperature = ds.read_temp(rom)</span>
+<span class="ln">        <span class="b">print</span>(f<span class="s">"T = {temperature:.2f} C"</span>)</span></code></pre>
+<p>Obserwuj temperaturę przez około minutę. Następnie ogrzej czujnik palcami i sprawdź, jak szybko zmienia się wskazanie.</p></div></section><section class="box info hasic"><div class="bt">Po co <code class="tt">convert_temp()</code> i opóźnienie?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Polecenie <code class="tt">convert_temp()</code> rozpoczyna fizyczny pomiar temperatury w czujniku. Funkcja <code class="tt">read_temp()</code> odczytuje wynik zapisany już w pamięci DS18B20.</p><p>Przy rozdzielczości 12 bitów konwersja może trwać do około 750&nbsp;ms, dlatego natychmiastowy odczyt mógłby zwrócić wynik poprzedniej konwersji.</p></div></section><h2 id="s5"><span class="num">5</span>Zadanie 3: Co dzieje się na linii 1-Wire?</h2>
+<p>Transmisja 1-Wire nie ma osobnego zegara. Informacja jest kodowana czasem trwania impulsów na linii DQ.</p>
+<p>Każda komunikacja rozpoczyna się sekwencją RESET. Następnie urządzenie odpowiada impulsem <i>presence</i>, informując urządzenie sterujące o swojej obecności.</p><section class="box meas"><div class="bt">Pomiar 3.1 — RESET i presence pulse</div><div class="bb"><p>Podłącz wejście cyfrowe Analog Discovery II do linii DQ DS18B20 oraz połącz masę analizatora z GND płytki.</p>
+<p>Uruchom w pętli:</p><pre class="code"><code><span class="ln"><span class="k">from</span> utime <span class="k">import</span> sleep_ms</span>
+<span class="ln"><span class="k">while</span> <span class="k">True</span>:</span>
+<span class="ln">    <span class="b">print</span>(ow.reset())</span>
+<span class="ln">    sleep_ms(20)</span></code></pre>
+<p>W narzędziu Logic zaobserwuj:</p>
+<ul class="tight"><li>impuls RESET generowany przez Raspberry Pi Pico,</li><li>odpowiedź <i>presence pulse</i> generowaną przez DS18B20.</li></ul>
+<p>Za pomocą kursorów zmierz czasy impulsów i porównaj je z wartościami podanymi w dokumentacji czujnika.</p></div></section><section class="box tip hasic"><div class="bt">1-Wire jest interfejsem zależnym od czasu</div><div class="ic"><svg viewBox="0 0 352 512" aria-hidden="true"><path fill="currentColor" d="M96.1 454.4c0 6.3 1.9 12.4 5.4 17.7l17.1 25.7a32 32 0 0 0 26.6 14.3h61.7a32 32 0 0 0 26.6-14.3l17.1-25.7a32 32 0 0 0 5.4-17.7l.04-38.4H96l.1 38.4zM0 176c0 44.4 16.5 84.9 43.6 115.8 16.5 18.8 42.4 58.2 52.2 91.5v.3h160v-.3c9.9-33.3 35.7-72.7 52.2-91.5A175.3 175.3 0 0 0 352 176C352 78.6 272.9-.3 175.5 0 73.4.3 0 83 0 176zm176-80c-44.1 0-80 35.9-80 80 0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.8 50.2-112 112-112 8.8 0 16 7.2 16 16s-7.2 16-16 16z"/></svg></div><div class="bb"><p>W UART odbiornik zna szybkość transmisji, a w SPI urządzenia korzystają z osobnego zegara. W 1-Wire znaczenie sygnału zależy od tego, <b>jak długo linia pozostaje w stanie niskim lub wysokim</b>.</p><p>Dlatego poprawna obsługa 1-Wire wymaga precyzyjnego generowania impulsów. W MicroPythonie szczegóły te ukrywa moduł <code class="tt">onewire</code>.</p></div></section><h2 id="s6"><span class="num">6</span>Zadanie 4: Karta microSD i system plików</h2>
+<p>Gniazdo microSD na płytce można obsługiwać w trybie SPI. W tym trybie wykorzystujemy:</p>
+<ul><li>CLK jako SCK,</li><li>CMD jako MOSI,</li><li>DAT0 jako MISO,</li><li>DAT3 jako CS.</li></ul>
+<p>Wykorzystamy osobny interfejs SPI1:</p>
+<p class="disp"><code class="tt">SCK=GP10</code>,&ensp; <code class="tt">MOSI=GP11</code>,&ensp; <code class="tt">MISO=GP12</code>,&ensp; <code class="tt">CS=GP13</code>.</p><section class="box info hasic"><div class="bt">Sterownik karty a system plików</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Karta microSD jest urządzeniem blokowym. Sterownik <code class="tt">sdcard.py</code> umożliwia odczyt i zapis bloków danych, ale nie tworzy jeszcze plików takich jak <code class="tt">log.csv</code>.</p>
+<p>Dopiero warstwa systemu plików FAT pozwala używać:</p>
+<ul class="tight"><li>nazw plików,</li><li>katalogów,</li><li>funkcji <code class="tt">open()</code>,</li><li>operacji odczytu i zapisu tekstu.</li></ul></div></section><section class="box task hasic"><div class="bt">Zadanie 4.1 — Detekcja obecności karty</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Przed zamontowaniem karty połącz wyprowadzenie <b>DETECT</b> gniazda microSD z <code class="tt">GP15</code>.</p>
+<p>Uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span></span>
+<span class="ln"><span class="k">from</span> utime <span class="k">import</span> sleep_ms</span>
+<span class="ln">detect = <span class="b">Pin</span>(15, <span class="b">Pin</span>.IN)</span>
+<span class="ln"><span class="k">while</span> <span class="k">True</span>:</span>
+<span class="ln">    <span class="b">print</span>(detect.value())</span>
+<span class="ln">    sleep_ms(300)</span></code></pre>
+<p>Sprawdź stan wejścia:</p>
+<ul class="tight"><li>bez karty,</li><li>po włożeniu karty.</li></ul>
+<p>Na podstawie obserwacji określ, który poziom logiczny oznacza obecność karty.</p></div></section><section class="box warn hasic"><div class="bt">Uwaga</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M569.5 440C588 472 564.8 512 527.9 512H48.1c-36.9 0-60-40.1-41.6-72L246.4 24c18.5-32 64.7-32 83.2 0l239.9 416zM288 354a46 46 0 1 0 0 92 46 46 0 0 0 0-92zm-43.7-165.3 7.4 136c.3 6.4 5.6 11.3 12 11.3h48.5c6.4 0 11.6-5 12-11.3l7.4-136c.4-6.9-5.1-12.7-12-12.7h-63.4c-6.9 0-12.4 5.8-12 12.7z"/></svg></div><div class="bb"><p>Nie wyjmuj zamontowanej karty podczas zapisu danych. Przed fizycznym wyjęciem karty należy zamknąć otwarte pliki i odmontować system plików.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 4.2 — Montowanie karty microSD</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Skopiuj do pamięci Raspberry Pi Pico dostarczony plik <code class="tt">sdcard.py</code>.</p>
+<p>Następnie uruchom:</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span>, <span class="b">SPI</span></span>
+<span class="ln"><span class="k">import</span> os</span>
+<span class="ln"><span class="k">import</span> vfs</span>
+<span class="ln"><span class="k">import</span> sdcard</span>
+<span class="ln">spi_sd = <span class="b">SPI</span>(</span>
+<span class="ln">    1,</span>
+<span class="ln">    baudrate=1_000_000,</span>
+<span class="ln">    polarity=0,</span>
+<span class="ln">    phase=0,</span>
+<span class="ln">    sck=<span class="b">Pin</span>(10),</span>
+<span class="ln">    mosi=<span class="b">Pin</span>(11),</span>
+<span class="ln">    miso=<span class="b">Pin</span>(12)</span>
+<span class="ln">)</span>
+<span class="ln">cs_sd = <span class="b">Pin</span>(13, <span class="b">Pin</span>.OUT, value=1)</span>
+<span class="ln">sd = sdcard.SDCard(spi_sd, cs_sd)</span>
+<span class="ln">fs = vfs.VfsFat(sd)</span>
+<span class="ln">vfs.mount(fs, <span class="s">"/sd"</span>)</span>
+<span class="ln"><span class="b">print</span>(os.listdir(<span class="s">"/sd"</span>))</span></code></pre>
+<p>Jeżeli karta została poprawnie zamontowana, program powinien wyświetlić listę plików znajdujących się na karcie.</p></div></section><section class="box info hasic"><div class="bt">Co robią <code class="tt">SDCard</code>, <code class="tt">VfsFat</code> i <code class="tt">mount()</code>?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>W kodzie pojawiają się trzy kolejne warstwy:</p>
+<ol class="tight">
+<li><code class="tt">sdcard.SDCard(spi_sd, cs_sd)</code> tworzy obiekt reprezentujący urządzenie blokowe. Sterownik potrafi odczytywać i zapisywać sektory karty przez SPI, ale na tym etapie nie operujemy jeszcze na plikach.</li>
+<li><code class="tt">vfs.VfsFat(sd)</code> tworzy obiekt systemu plików FAT korzystający z urządzenia blokowego <code class="tt">sd</code>.</li>
+<li><code class="tt">vfs.mount(fs, &#x27;/sd&#x27;)</code> dołącza ten system plików do wirtualnego systemu plików MicroPythona pod ścieżką <code class="tt">/sd</code>.</li></ol>
+<p>Dopiero po zamontowaniu można wykonywać zwykłe operacje na plikach, np. <code class="tt">open(&#x27;/sd/test.txt&#x27;, ...)</code>.</p>
+<p>Polecenie:</p><pre class="code"><code><span class="ln">os.listdir(<span class="s">'/sd'</span>)</span></code></pre>
+<p>zwraca listę plików i katalogów znajdujących się w katalogu głównym karty.</p>
+<p>Przed wyjęciem karty należy wykonać:</p><pre class="code"><code><span class="ln">vfs.umount(<span class="s">'/sd'</span>)</span></code></pre>
+<p>co odłącza system plików od VFS. Dzięki temu system wie, że karta nie będzie już używana.</p></div></section><section class="box info hasic"><div class="bt">Co oznacza <code class="tt">/sd</code>?</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Po zamontowaniu system plików karty staje się częścią drzewa plików MicroPythona.</p>
+<p>Przykładowo:</p>
+<ul class="tight"><li><code class="tt">/sd/test.txt</code> — plik na karcie microSD,</li><li><code class="tt">/main.py</code> — plik w pamięci flash Raspberry Pi Pico.</li></ul>
+<p>Dzięki temu z kartą można pracować przez standardową funkcję <code class="tt">open()</code>.</p></div></section><h2 id="s7"><span class="num">7</span>Zadanie 5: Zapis i odczyt plików</h2><section class="box task hasic"><div class="bt">Zadanie 5.1 — Pierwszy plik na karcie</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Poniższy program jest kompletnym przykładem: inicjalizuje kartę, montuje system plików, zapisuje plik, zamyka go i na końcu odmontowuje kartę.</p><pre class="code"><code><span class="ln"><span class="k">from</span> machine <span class="k">import</span> <span class="b">Pin</span>, <span class="b">SPI</span></span>
+<span class="ln"><span class="k">import</span> vfs</span>
+<span class="ln"><span class="k">import</span> sdcard</span>
+<span class="ln">spi_sd = <span class="b">SPI</span>(</span>
+<span class="ln">    1,</span>
+<span class="ln">    baudrate=1_000_000,</span>
+<span class="ln">    polarity=0,</span>
+<span class="ln">    phase=0,</span>
+<span class="ln">    sck=<span class="b">Pin</span>(10),</span>
+<span class="ln">    mosi=<span class="b">Pin</span>(11),</span>
+<span class="ln">    miso=<span class="b">Pin</span>(12)</span>
+<span class="ln">)</span>
+<span class="ln">cs_sd = <span class="b">Pin</span>(13, <span class="b">Pin</span>.OUT, value=1)</span>
+<span class="ln">sd = sdcard.SDCard(spi_sd, cs_sd)</span>
+<span class="ln">fs = vfs.VfsFat(sd)</span>
+<span class="ln">vfs.mount(fs, <span class="s">'/sd'</span>)</span>
+<span class="ln"><span class="k">with</span> <span class="b">open</span>(<span class="s">'/sd/test.txt'</span>, <span class="s">'w'</span>) <span class="k">as</span> file:</span>
+<span class="ln">    file.write(<span class="s">'PSM - Laboratorium 7\n'</span>)</span>
+<span class="ln">    file.write(<span class="s">'Karta microSD dziala!\n'</span>)</span>
+<span class="ln">vfs.umount(<span class="s">'/sd'</span>)</span>
+<span class="ln"><span class="b">print</span>(<span class="s">'Plik zapisany.'</span>)</span></code></pre>
+<p>Po wykonaniu programu ponownie zamontuj kartę tak jak w zadaniu 4.2.</p>
+<p>Następnie odczytaj plik. <b>Poniższy fragment nie jest pełnym programem</b> — zakłada, że karta została wcześniej zainicjalizowana i zamontowana pod ścieżką <code class="tt">/sd</code>:</p><pre class="code"><code><span class="ln"><span class="k">with</span> <span class="b">open</span>(<span class="s">'/sd/test.txt'</span>, <span class="s">'r'</span>) <span class="k">as</span> file:</span>
+<span class="ln">    text = file.read()</span>
+<span class="ln"><span class="b">print</span>(text)</span></code></pre>
+<p>Po odczycie odmontuj kartę za pomocą <code class="tt">vfs.umount(&#x27;/sd&#x27;)</code>. Sprawdź również, czy plik jest widoczny po odczytaniu karty na komputerze.</p></div></section><section class="box info hasic"><div class="bt">Tryby otwierania pliku</div><div class="ic"><svg viewBox="0 0 512 512" aria-hidden="true"><path fill="currentColor" d="M256 8C119 8 8 119.1 8 256c0 137 111 248 248 248s248-111 248-248C504 119.1 393 8 256 8zm0 110a42 42 0 1 1 0 84 42 42 0 0 1 0-84zm56 254c0 6.6-5.4 12-12 12h-88c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h12v-64h-12c-6.6 0-12-5.4-12-12v-24c0-6.6 5.4-12 12-12h64c6.6 0 12 5.4 12 12v100h12c6.6 0 12 5.4 12 12v24z"/></svg></div><div class="bb"><p>Najczęściej używane tryby funkcji <code class="tt">open()</code>:</p>
+<ul class="tight"><li><code class="tt">&#x27;r&#x27;</code> — odczyt,</li><li><code class="tt">&#x27;w&#x27;</code> — zapis od początku; poprzednia zawartość jest usuwana,</li><li><code class="tt">&#x27;a&#x27;</code> — dopisywanie na końcu istniejącego pliku.</li></ul>
+<p>W kodzie Pythona można stosować zarówno pojedyncze, jak i podwójne cudzysłowy do zapisu napisów. W tekście instrukcji używamy apostrofów, ponieważ znak podwójnego cudzysłowu ma specjalne znaczenie w polskiej konfiguracji LaTeX.</p>
+<p>Konstrukcja:</p><p class="disp"><code class="tt">with open(...) as file:</code></p>
+<p>automatycznie zamyka plik po zakończeniu bloku.</p></div></section><section class="box task hasic"><div class="bt">Zadanie 5.2 — Plik CSV z temperaturą</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Utwórz plik:</p><p class="disp"><code class="tt">/sd/temperature.csv</code></p>
+<p>z nagłówkiem:</p><p class="disp"><code class="tt">sample,temperature_C</code></p>
+<p>Wykonaj 20 pomiarów temperatury i zapisuj je kolejno do pliku.</p>
+<p>Przykładowa linia:</p><p class="disp"><code class="tt">7,23.44</code></p>
+<p>Po zakończeniu pomiarów odczytaj cały plik w Thonny i sprawdź jego zawartość.</p></div></section><h2 id="s8"><span class="num">8</span>Zadanie 6: RTC + DS18B20 + microSD</h2>
+<p>W prawdziwym rejestratorze danych numer próbki nie wystarcza. Potrzebujemy informacji, <b>kiedy</b> wykonano pomiar. Wykorzystamy więc RTC PCF8563 z Laboratorium 5.</p>
+<p>Podłącz RTC do:</p>
+<p class="disp">SDA → <code class="tt">GP16</code>,&emsp;&emsp;SCL → <code class="tt">GP17</code>.</p><section class="box task hasic"><div class="bt">Zadanie 6.1 — Znacznik czasu z RTC</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M572.5 241.4C518.3 135.6 410.9 64 288 64S57.7 135.6 3.5 241.4a32.4 32.4 0 0 0 0 29.2C57.7 376.4 165.1 448 288 448s230.3-71.6 284.5-177.4a32.4 32.4 0 0 0 0-29.2zM288 400a144 144 0 1 1 144-144 143.9 143.9 0 0 1-144 144zm0-240a95.3 95.3 0 0 0-25.3 3.8 47.9 47.9 0 0 1-66.9 66.9A95.8 95.8 0 1 0 288 160z"/></svg></div><div class="bb"><p>Wykorzystaj funkcję odczytującą RTC przygotowaną podczas Laboratorium 5.</p>
+<p>Na jej podstawie przygotuj napis w formacie:</p><p class="disp"><code class="tt">YYYY-MM-DD,HH:MM:SS</code></p>
+<p>np.:</p><p class="disp"><code class="tt">2026-11-02,17:35:08</code>.</p>
+<p>W tym zadaniu <b>wyświetl przygotowany znacznik czasu w konsoli Thonny</b>. Nie zapisuj go jeszcze do pliku — zapis znacznika czasu razem z temperaturą będzie częścią zadania końcowego.</p></div></section><h2 id="s9"><span class="num">9</span>Zadanie końcowe: Rejestrator temperatury</h2><section class="box final"><div class="bt">Zadanie 7.1 — Logger CSV</div><div class="bb"><p>Zbuduj rejestrator temperatury.</p>
+<p><b>Każde uruchomienie programu powinno tworzyć nowy plik</b>, tak aby wcześniejsze pomiary nie zostały nadpisane. Kolejne pliki nazwij:</p>
+<p class="disp"><code class="tt">dane1.csv</code>,&ensp; <code class="tt">dane2.csv</code>,&ensp; <code class="tt">dane3.csv</code>,&ensp; …</p>
+<p>Program powinien:</p>
+<ol class="tight"><li>sprawdzić obecność karty microSD,</li><li>zamontować kartę,</li><li>znaleźć pierwszy wolny numer pliku,</li><li>utworzyć nowy plik <code class="tt">daneN.csv</code>,</li><li>zapisać nagłówek CSV,</li><li>odczytywać temperaturę z DS18B20,</li><li>pobierać aktualny czas i datę z RTC,</li><li>co 2&nbsp;s zapisywać kolejny pomiar,</li><li>jednocześnie wyświetlać aktualny pomiar w konsoli Thonny,</li><li>po wykonaniu 30 pomiarów zamknąć plik i odmontować kartę.</li></ol>
+<p>Plik powinien mieć postać:</p><pre class="code plain"><code>date,time,temperature_C
+2026-11-02,17:35:08,23.44
+2026-11-02,17:35:10,23.50
+2026-11-02,17:35:12,23.50</code></pre>
+<h4 class="sub">Wskazówka dotycząca wyboru nazwy pliku</h4>
+<p>Funkcja:</p><pre class="code"><code><span class="ln">files = os.listdir(<span class="s">'/sd'</span>)</span></code></pre>
+<p>zwraca listę nazw plików znajdujących się na karcie.</p>
+<p>W Pythonie operator <code class="tt">in</code> pozwala sprawdzić, czy dany element znajduje się na liście. Na przykład:</p><pre class="code"><code><span class="ln"><span class="k">if</span> <span class="s">'dane1.csv'</span> <span class="k">in</span> files:</span>
+<span class="ln">    <span class="b">print</span>(<span class="s">'Plik istnieje'</span>)</span></code></pre>
+<p>Rozpocznij od numeru:</p><pre class="code"><code><span class="ln">number = 1</span></code></pre>
+<p>Następnie przygotuj nazwę pliku:</p><pre class="code"><code><span class="ln">name = f<span class="s">'dane{number}.csv'</span></span></code></pre>
+<p>i sprawdzaj w pętli, czy znajduje się ona już na liście plików:</p><pre class="code"><code><span class="ln"><span class="k">while</span> name <span class="k">in</span> files:</span>
+<span class="ln">    number += 1</span>
+<span class="ln">    name = f<span class="s">'dane{number}.csv'</span></span></code></pre>
+<p>Po zakończeniu pętli zmienna <code class="tt">name</code> zawiera pierwszą wolną nazwę pliku. Pełną ścieżkę utwórz za pomocą:</p><pre class="code"><code><span class="ln">filename = <span class="s">'/sd/'</span> + name</span></code></pre>
+<p>Zwróć uwagę, że funkcja <code class="tt">os.listdir(&#x27;/sd&#x27;)</code> zwraca same nazwy plików, np. <code class="tt">dane1.csv</code>, a nie pełne ścieżki do plików.</p>
+<p>Ponieważ przy każdym uruchomieniu tworzysz nowy plik, otwórz go w trybie <code class="tt">&#x27;w&#x27;</code>.</p>
+<p>Po wykonaniu 30 pomiarów plik powinien zostać zamknięty, a karta prawidłowo odmontowana:</p><pre class="code"><code><span class="ln">vfs.umount(<span class="s">'/sd'</span>)</span></code></pre>
+<p>Wyjmij kartę, otwórz utworzony plik na komputerze i sprawdź poprawność danych. Uruchom program ponownie i upewnij się, że powstał kolejny plik, a poprzedni pozostał niezmieniony.</p></div></section><h2 id="s10"><span class="num">10</span>Podsumowanie</h2><section class="box tip hasic"><div class="bt">Po tych zajęciach powinieneś umieć</div><div class="ic"><svg viewBox="0 0 352 512" aria-hidden="true"><path fill="currentColor" d="M96.1 454.4c0 6.3 1.9 12.4 5.4 17.7l17.1 25.7a32 32 0 0 0 26.6 14.3h61.7a32 32 0 0 0 26.6-14.3l17.1-25.7a32 32 0 0 0 5.4-17.7l.04-38.4H96l.1 38.4zM0 176c0 44.4 16.5 84.9 43.6 115.8 16.5 18.8 42.4 58.2 52.2 91.5v.3h160v-.3c9.9-33.3 35.7-72.7 52.2-91.5A175.3 175.3 0 0 0 352 176C352 78.6 272.9-.3 175.5 0 73.4.3 0 83 0 176zm176-80c-44.1 0-80 35.9-80 80 0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.8 50.2-112 112-112 8.8 0 16 7.2 16 16s-7.2 16-16 16z"/></svg></div><div class="bb"><ul class="tight">
+<li>wyjaśnić podstawową zasadę działania magistrali 1-Wire,</li>
+<li>odnaleźć urządzenia 1-Wire na wspólnej linii,</li>
+<li>wyjaśnić rolę 64-bitowego kodu ROM,</li>
+<li>wykonać pomiar temperatury za pomocą DS18B20,</li>
+<li>rozpoznać sekwencję RESET i presence pulse,</li>
+<li>podłączyć kartę microSD w trybie SPI,</li>
+<li>wyjaśnić różnicę pomiędzy urządzeniem blokowym a systemem plików,</li>
+<li>zamontować i odmontować system plików FAT,</li>
+<li>zapisywać i odczytywać pliki tekstowe,</li>
+<li>tworzyć pliki CSV z pomiarami i automatycznie wybierać kolejną nazwę pliku,</li>
+<li>połączyć czujnik, RTC i pamięć masową w kompletny rejestrator danych.</li></ul></div></section><section class="box warn hasic"><div class="bt">Uwaga</div><div class="ic"><svg viewBox="0 0 576 512" aria-hidden="true"><path fill="currentColor" d="M569.5 440C588 472 564.8 512 527.9 512H48.1c-36.9 0-60-40.1-41.6-72L246.4 24c18.5-32 64.7-32 83.2 0l239.9 416zM288 354a46 46 0 1 0 0 92 46 46 0 0 0 0-92zm-43.7-165.3 7.4 136c.3 6.4 5.6 11.3 12 11.3h48.5c6.4 0 11.6-5 12-11.3l7.4-136c.4-6.9-5.1-12.7-12-12.7h-63.4c-6.9 0-12.4 5.8-12 12.7z"/></svg></div><div class="bb"><p>Przed opuszczeniem stanowiska:</p>
+<ol class="tight"><li>zatrzymaj program,</li><li>zamknij wszystkie otwarte pliki,</li><li>odmontuj kartę microSD,</li><li>dopiero wtedy wyjmij kartę z gniazda,</li><li>usuń z pamięci Raspberry Pi Pico pliki utworzone podczas laboratorium.</li></ol></div></section>
+</body>
+</html>
